@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* Portal: dark (default while authenticated) */
+html.dark {
+  --portal-bg: #020617;
+  --portal-surface: #0f172a;
+  --portal-elevated: #1e293b;
+  --portal-border: #1f2937;
+  --portal-text: #e5e7eb;
+  --portal-muted: #9ca3af;
+  --portal-bubble-mine: #047857;
+  --portal-bubble-mine-text: #ecfdf5;
+  --portal-bubble-other: #111827;
+  --portal-bubble-other-text: #e5e7eb;
+}
+
+html.theme-golden {
+  --portal-bg: #120f05;
+  --portal-surface: #1c1709;
+  --portal-elevated: #2a220f;
+  --portal-border: #3d3314;
+  --portal-text: #f8e7b5;
+  --portal-muted: #c9a85a;
+  --portal-bubble-mine: #b8860b;
+  --portal-bubble-mine-text: #1a1203;
+  --portal-bubble-other: #2a220f;
+  --portal-bubble-other-text: #fde9a9;
+}
+
+html.dark,
+html.theme-golden {
+  --background: var(--portal-bg);
+  --foreground: var(--portal-text);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+.chat-pattern {
+  background-image: radial-gradient(
+      circle at 1px 1px,
+      color-mix(in oklab, var(--portal-muted) 18%, transparent) 1px,
+      transparent 0
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--portal-bg) 92%, #000) 0%,
+      var(--portal-bg) 100%
+    );
+  background-size: 18px 18px, 100% 100%;
+}
