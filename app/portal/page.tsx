@@ -16,7 +16,7 @@ export default async function PortalPage() {
   return (
     <ChatRoom
       userId={user.id}
-      userEmail={user.email ?? ""}
+      
       username={resolveChatUsername(user)}
     />
   );
