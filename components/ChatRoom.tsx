@@ -122,7 +122,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     // Doosre user ka status subscribe karo
     const profileChannel = supabase.channel("profiles-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, (payload) => {
-        if (payload.new && payload.new.id !== userId) {
+        if (payload.new && (payload.new as any).id === userId) {
           setOtherUser(payload.new as any);
         }
       })
