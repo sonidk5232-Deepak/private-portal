@@ -69,7 +69,7 @@ export default function LoginForm() {
           spellCheck={false}
           value={userId}
           onChange={(e) => setUserId(e.target.value)}
-          placeholder="e.g. deepak01"
+          placeholder=""
           required
         />
       </label>
