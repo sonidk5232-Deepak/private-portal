@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import {
   Check, CheckCheck, Loader2, LogOut,
   Paperclip, Send, X, FileText, Download,
-  Trash2, Image as ImageIcon, Reply, CornerUpLeft
+  Trash2, Image as ImageIcon, Reply, CornerUpLeft, Eraser
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 
@@ -27,27 +27,45 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
   const [selectedFile, setSelectedFile]   = useState<File | null>(null);
   const [filePreview, setFilePreview]     = useState<string | null>(null);
   const [deleteModal, setDeleteModal]     = useState<{ id: string; mine: boolean } | null>(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [fullscreenImg, setFullscreenImg] = useState<string | null>(null);
   const [otherUser, setOtherUser]         = useState<any>(null);
   const [othersTyping, setOthersTyping]   = useState(false);
   const [unreadCount, setUnreadCount]     = useState(0);
   const [isAtBottom, setIsAtBottom]       = useState(true);
-  const [replyTo, setReplyTo]             = useState<any>(null); // reply feature
+  const [replyTo, setReplyTo]             = useState<any>(null);
   const [showWallpaperPanel, setShowWallpaperPanel] = useState(false);
+  const [lastSeenTimer, setLastSeenTimer] = useState(0); // force re-render for live last seen
   const [wallpaper, setWallpaper]         = useState<string>(() =>
     typeof window !== "undefined" ? (localStorage.getItem("chat_wallpaper") || "") : ""
   );
-  const [customUrl, setCustomUrl]         = useState("");
+  const [customUrl, setCustomUrl] = useState("");
 
   const bottomRef        = useRef<HTMLDivElement>(null);
+  const firstUnreadRef   = useRef<HTMLDivElement>(null);
   const mainRef          = useRef<HTMLDivElement>(null);
   const fileInputRef     = useRef<HTMLInputElement>(null);
-  const inputRef         = useRef<HTMLInputElement>(null);
+  const textareaRef      = useRef<HTMLTextAreaElement>(null);
   const longPressTimer   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingTimeout    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingRef      = useRef(false);
   const typingChRef      = useRef<any>(null);
+  const firstUnreadId    = useRef<string | null>(null);
+
+  // ─── Last seen live update (har 30 sec mein re-render) ───────────────────
+  useEffect(() => {
+    const interval = setInterval(() => setLastSeenTimer((t) => t + 1), 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // ─── Auto resize textarea ─────────────────────────────────────────────────
+  const autoResize = () => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = "auto";
+    ta.style.height = Math.min(ta.scrollHeight, 120) + "px";
+  };
 
   // ─── 1. Messages + Realtime ───────────────────────────────────────────────
   useEffect(() => {
@@ -56,9 +74,25 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
         .from("messages")
         .select("*")
         .order("created_at", { ascending: true });
-      if (data) setAllMessages(data);
+
+      if (data) {
+        setAllMessages(data);
+
+        // ✅ FIX: Portal kholte hi unseen messages dhundo
+        const unseenMsgs = data.filter((m) => m.user_id !== userId && !m.is_seen);
+        if (unseenMsgs.length > 0) {
+          setUnreadCount(unseenMsgs.length);
+          firstUnreadId.current = unseenMsgs[0].id;
+          // Pehle unseen message tak scroll karo
+          setTimeout(() => {
+            firstUnreadRef.current?.scrollIntoView({ behavior: "instant", block: "start" });
+          }, 150);
+        } else {
+          // Koi unseen nahi — bottom par jao
+          setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "instant" }), 100);
+        }
+      }
       setLoading(false);
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "instant" }), 100);
     }
     initChat();
 
@@ -101,23 +135,56 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
         await supabase.from("messages").update({ is_seen: true }).in("id", unreadIds);
       }
     };
-    if (allMessages.length > 0) markAsSeen();
-  }, [allMessages, userId, supabase]);
+    if (allMessages.length > 0 && isAtBottom) markAsSeen();
+  }, [allMessages, userId, supabase, isAtBottom]);
 
   // ─── 3. Online / Last Seen ────────────────────────────────────────────────
+  // ✅ FIX: goOnline mein last_seen_at bilkul mat chheena
+  //         Sirf goOffline mein last_seen_at set karo
   useEffect(() => {
-    const setOnlineInDB = async (online: boolean) => {
-      await supabase.from("profiles").upsert(
-        { id: userId, username, is_online: online, last_seen_at: new Date().toISOString() },
-        { onConflict: "id" }
-      );
+    const goOnline = async () => {
+      // Pehle check karo profile exist karta hai ya nahi
+      const { data: existing } = await supabase
+        .from("profiles")
+        .select("id, last_seen_at")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (existing) {
+        // Profile hai — sirf is_online true karo, last_seen_at mat chheena
+        await supabase.from("profiles")
+          .update({ is_online: true, username })
+          .eq("id", userId);
+      } else {
+        // Naya profile banao
+        await supabase.from("profiles").insert({
+          id: userId, username,
+          is_online: true,
+          last_seen_at: null,
+        });
+      }
     };
-    setOnlineInDB(true);
 
-    const handleVisibility = () => setOnlineInDB(!document.hidden);
+    const goOffline = async () => {
+      await supabase.from("profiles")
+        .update({
+          is_online: false,
+          last_seen_at: new Date().toISOString(), // ✅ Sirf yahan set karo
+        })
+        .eq("id", userId);
+    };
+
+    goOnline();
+
+    const handleVisibility = () => {
+      if (document.hidden) goOffline();
+      else goOnline();
+    };
+
     document.addEventListener("visibilitychange", handleVisibility);
-    window.addEventListener("beforeunload", () => setOnlineInDB(false));
+    window.addEventListener("beforeunload", goOffline);
 
+    // Doosre user ka data lo
     const fetchOther = async () => {
       const { data } = await supabase
         .from("profiles")
@@ -129,22 +196,26 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     };
     fetchOther();
 
+    // Realtime profile watch
     const profileCh = supabase.channel("profiles-watch")
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, (payload) => {
-        if (payload.new && (payload.new as any).id !== userId) setOtherUser(payload.new);
+        if (payload.new && (payload.new as any).id !== userId) {
+          setOtherUser(payload.new);
+        }
       }).subscribe();
 
     return () => {
-      setOnlineInDB(false);
+      goOffline();
       document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("beforeunload", goOffline);
       supabase.removeChannel(profileCh);
     };
   }, [userId, username, supabase]);
 
-  // ─── 4. Typing — Broadcast ────────────────────────────────────────────────
+  // ─── 4. Typing Broadcast ──────────────────────────────────────────────────
   useEffect(() => {
-    const ch = supabase.channel("typing-broadcast", {
-      config: { broadcast: { self: false } },
+    const ch = supabase.channel("typing-v3", {
+      config: { broadcast: { self: false, ack: false } },
     });
 
     ch.on("broadcast", { event: "typing" }, ({ payload }) => {
@@ -152,7 +223,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
       if (payload.isTyping) {
         setOthersTyping(true);
         if (typingClearTimer.current) clearTimeout(typingClearTimer.current);
-        typingClearTimer.current = setTimeout(() => setOthersTyping(false), 3000);
+        typingClearTimer.current = setTimeout(() => setOthersTyping(false), 4000);
       } else {
         setOthersTyping(false);
         if (typingClearTimer.current) clearTimeout(typingClearTimer.current);
@@ -164,31 +235,32 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     });
 
     return () => {
-      supabase.removeChannel(ch);
       typingChRef.current = null;
+      supabase.removeChannel(ch);
     };
   }, [userId, supabase]);
 
+  const sendTypingSignal = useCallback((isTyping: boolean) => {
+    typingChRef.current?.send({
+      type: "broadcast", event: "typing",
+      payload: { userId, isTyping },
+    });
+  }, [userId]);
+
   const handleTyping = useCallback((value: string) => {
     setDraft(value);
-    if (!typingChRef.current) return;
+    setTimeout(autoResize, 0);
 
     if (!isTypingRef.current) {
       isTypingRef.current = true;
-      typingChRef.current.send({
-        type: "broadcast", event: "typing",
-        payload: { userId, isTyping: true },
-      });
+      sendTypingSignal(true);
     }
     if (typingTimeout.current) clearTimeout(typingTimeout.current);
     typingTimeout.current = setTimeout(() => {
       isTypingRef.current = false;
-      typingChRef.current?.send({
-        type: "broadcast", event: "typing",
-        payload: { userId, isTyping: false },
-      });
+      sendTypingSignal(false);
     }, 2000);
-  }, [userId]);
+  }, [sendTypingSignal]);
 
   // ─── 5. Scroll + Unread ───────────────────────────────────────────────────
   const handleScroll = useCallback(() => {
@@ -196,12 +268,16 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     if (!el) return;
     const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
     setIsAtBottom(atBottom);
-    if (atBottom) setUnreadCount(0);
+    if (atBottom) {
+      setUnreadCount(0);
+      firstUnreadId.current = null;
+    }
   }, []);
 
   const scrollToBottom = () => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     setUnreadCount(0);
+    firstUnreadId.current = null;
     setIsAtBottom(true);
   };
 
@@ -211,19 +287,13 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     const text = draft.trim();
     setDraft("");
     setReplyTo(null);
+    if (textareaRef.current) textareaRef.current.style.height = "42px";
 
     if (typingTimeout.current) clearTimeout(typingTimeout.current);
     isTypingRef.current = false;
-    typingChRef.current?.send({
-      type: "broadcast", event: "typing",
-      payload: { userId, isTyping: false },
-    });
+    sendTypingSignal(false);
 
-    const msgData: any = {
-      user_id: userId, username, text,
-      is_seen: false, deleted_for: [],
-    };
-    // Reply info save karo
+    const msgData: any = { user_id: userId, username, text, is_seen: false, deleted_for: [] };
     if (replyTo) {
       msgData.reply_to_id   = replyTo.id;
       msgData.reply_to_text = replyTo.text || replyTo.file_name || "📎 File";
@@ -269,7 +339,8 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
 
       const { error: upErr } = await supabase.storage.from("chat-files").upload(filePath, selectedFile);
       if (upErr) throw upErr;
-      const { data: urlData } = await supabase.storage.from("chat-files").createSignedUrl(filePath, 60 * 60 * 24 * 365);
+      const { data: urlData } = await supabase.storage
+        .from("chat-files").createSignedUrl(filePath, 60 * 60 * 24 * 365);
 
       const msgData: any = {
         user_id: userId, username, text: selectedFile.name,
@@ -292,8 +363,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
         });
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
       }
-      cancelFile();
-      setReplyTo(null);
+      cancelFile(); setReplyTo(null);
     } catch (err: any) { alert("File bhejne mein error: " + err.message); }
     finally { setUploading(false); }
   };
@@ -314,18 +384,36 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     setDeleteModal(null);
   };
 
-  // ─── 9. Reply — message par click karke jump karo ────────────────────────
+  // ─── 9. Clear Chat ────────────────────────────────────────────────────────
+  const clearChatForMe = async () => {
+    // Sabke messages mein apna userId deleted_for mein daalo
+    const visibleMsgs = allMessages.filter((m) => !(m.deleted_for || []).includes(userId));
+    for (const m of visibleMsgs) {
+      const updated = [...(m.deleted_for || []), userId];
+      await supabase.from("messages").update({ deleted_for: updated }).eq("id", m.id);
+    }
+    setAllMessages((prev) =>
+      prev.map((m) => ({
+        ...m,
+        deleted_for: [...(m.deleted_for || []), userId],
+      }))
+    );
+    setShowClearConfirm(false);
+  };
+
+  // ─── 10. Jump to reply ────────────────────────────────────────────────────
   const jumpToMessage = (id: string) => {
     const el = document.getElementById(`msg-${id}`);
     if (!el) return;
     el.scrollIntoView({ behavior: "smooth", block: "center" });
-    el.classList.add("ring-2", "ring-emerald-400", "ring-offset-1");
-    setTimeout(() => el.classList.remove("ring-2", "ring-emerald-400", "ring-offset-1"), 1500);
+    el.classList.add("ring-2", "ring-emerald-400");
+    setTimeout(() => el.classList.remove("ring-2", "ring-emerald-400"), 1500);
   };
 
-  // ─── 10. Helpers ──────────────────────────────────────────────────────────
+  // ─── 11. Helpers ──────────────────────────────────────────────────────────
+  // ✅ FIX: Accurate last seen — lastSeenTimer se live update hoga
   const formatLastSeen = (ts: string) => {
-    if (!ts) return "";
+    if (!ts) return "pehle";
     const d   = new Date(ts);
     const now = new Date();
     const sec = Math.floor((now.getTime() - d.getTime()) / 1000);
@@ -334,11 +422,11 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     const min = Math.floor(sec / 60);
     if (min < 60)   return `${min} minute pehle`;
     const hr  = Math.floor(min / 60);
-    if (hr  < 24)   return `aaj ${d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })} ko`;
+    if (hr < 24)    return `aaj ${d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })} ko`;
     const yest = new Date(now); yest.setDate(yest.getDate() - 1);
     if (d.toDateString() === yest.toDateString())
       return `kal ${d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })} ko`;
-    return `${d.toLocaleDateString("en-IN", { day: "numeric", month: "short" })} ko`;
+    return `${d.toLocaleDateString("en-IN", { day: "numeric", month: "short" })} ${d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })} ko`;
   };
 
   const formatSize = (b: number) => {
@@ -362,15 +450,13 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
   };
 
-  // ─── 11. Render message content ───────────────────────────────────────────
+  // ─── 12. Render content ───────────────────────────────────────────────────
   const renderContent = (m: any) => {
-    if (m.file_type === "image") {
-      return (
-        <img src={m.file_url} alt={m.file_name}
-          onClick={() => setFullscreenImg(m.file_url)}
-          className="max-w-[220px] max-h-[280px] rounded-xl cursor-zoom-in object-cover block" />
-      );
-    }
+    if (m.file_type === "image") return (
+      <img src={m.file_url} alt={m.file_name}
+        onClick={() => setFullscreenImg(m.file_url)}
+        className="max-w-[220px] max-h-[280px] rounded-xl cursor-zoom-in object-cover block" />
+    );
     if (m.file_type === "video") return (
       <video controls className="max-w-[240px] max-h-[280px] rounded-xl block">
         <source src={m.file_url} />
@@ -390,27 +476,27 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
         <Download className="size-4 text-slate-300 shrink-0" />
       </a>
     );
-    return <p className="text-[14px] leading-snug break-words">{m.text}</p>;
+    return <p className="text-[14px] leading-snug whitespace-pre-wrap break-words">{m.text}</p>;
   };
 
-  // ─── 12. Timeline ─────────────────────────────────────────────────────────
-  const timeline = allMessages
-    .filter((m) => !(m.deleted_for || []).includes(userId))
-    .reduce((acc: any[], m: any, i: number, arr: any[]) => {
-      const date     = new Date(m.created_at).toDateString();
-      const prevDate = i > 0 ? new Date(arr[i - 1].created_at).toDateString() : null;
-      if (date !== prevDate) {
-        const today = new Date().toDateString();
-        const yest  = new Date(Date.now() - 86400000).toDateString();
-        const label = date === today ? "Aaj" : date === yest ? "Kal"
-          : new Date(m.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
-        acc.push({ kind: "date", key: "date-" + i, label });
-      }
-      acc.push({ kind: "message", message: m });
-      return acc;
-    }, []);
+  // ─── 13. Timeline ─────────────────────────────────────────────────────────
+  const visibleMessages = allMessages.filter((m) => !(m.deleted_for || []).includes(userId));
 
-  // ─── 13. Header subtitle ──────────────────────────────────────────────────
+  const timeline = visibleMessages.reduce((acc: any[], m: any, i: number, arr: any[]) => {
+    const date     = new Date(m.created_at).toDateString();
+    const prevDate = i > 0 ? new Date(arr[i - 1].created_at).toDateString() : null;
+    if (date !== prevDate) {
+      const today = new Date().toDateString();
+      const yest  = new Date(Date.now() - 86400000).toDateString();
+      const label = date === today ? "Aaj" : date === yest ? "Kal"
+        : new Date(m.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+      acc.push({ kind: "date", key: "date-" + i, label });
+    }
+    acc.push({ kind: "message", message: m, isFirstUnread: m.id === firstUnreadId.current });
+    return acc;
+  }, []);
+
+  // ─── 14. Header subtitle ──────────────────────────────────────────────────
   const headerSubtitle = () => {
     if (othersTyping) return (
       <span className="text-emerald-400 text-[11px] flex items-center gap-1.5">
@@ -430,17 +516,14 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
         Online
       </span>
     );
+    if (!otherUser.last_seen_at) return null;
+    // lastSeenTimer se live update hoga
     return (
-      <span className="text-[11px] text-slate-500">
+      <span key={lastSeenTimer} className="text-[11px] text-slate-500">
         Last seen {formatLastSeen(otherUser.last_seen_at)}
       </span>
     );
   };
-
-  // ─── SQL check: reply columns exist karne chahiye ─────────────────────────
-  // Run karo: ALTER TABLE messages ADD COLUMN IF NOT EXISTS reply_to_id UUID,
-  //           ADD COLUMN IF NOT EXISTS reply_to_text TEXT,
-  //           ADD COLUMN IF NOT EXISTS reply_to_user TEXT;
 
   if (loading) return (
     <div className="flex h-screen items-center justify-center bg-[#0f172a] text-emerald-500">
@@ -454,13 +537,18 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
 
       {wallpaper && <div className="absolute inset-0 bg-black/45 pointer-events-none z-0" />}
 
-      {/* ── Header ── */}
+      {/* Header */}
       <header className="relative z-10 border-b border-slate-800 bg-[#1e293b]/95 backdrop-blur px-4 py-3 flex justify-between items-center shrink-0">
         <div className="flex flex-col gap-0.5">
           <h1 className="font-bold text-emerald-400 text-lg tracking-tight leading-tight">Private Portal</h1>
           <div className="min-h-[16px] flex items-center">{headerSubtitle()}</div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {/* Clear Chat Button */}
+          <button onClick={() => setShowClearConfirm(true)} title="Chat saaf karo"
+            className="p-1.5 rounded-full text-slate-400 hover:text-red-400 hover:bg-slate-700 transition-colors">
+            <Eraser className="size-5" />
+          </button>
           <button onClick={() => setShowWallpaperPanel(true)} title="Wallpaper"
             className="p-1.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-700 transition-colors">
             <ImageIcon className="size-5" />
@@ -470,9 +558,10 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
         </div>
       </header>
 
-      {/* ── Messages ── */}
+      {/* Messages */}
       <main ref={mainRef} onScroll={handleScroll}
         className="relative z-10 flex-1 overflow-y-auto p-4 space-y-1 pb-36">
+
         {timeline.map((item: any) => {
           if (item.kind === "date") return (
             <div key={item.key} className="flex justify-center my-4">
@@ -486,84 +575,90 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
           const mine = m.user_id === userId;
 
           return (
-            <div key={m.id} id={`msg-${m.id}`}
-              className={`flex ${mine ? "justify-end" : "justify-start"} mb-1 group transition-all duration-300`}>
-
-              {/* Reply button — hover par dikhta hai (left side ke message ke liye right, right ke liye left) */}
-              {!mine && (
-                <button
-                  onClick={() => { setReplyTo(m); inputRef.current?.focus(); }}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity mr-1 mt-auto mb-2 p-1.5 rounded-full bg-slate-700/80 text-slate-400 hover:text-white hover:bg-slate-600 self-end">
-                  <CornerUpLeft className="size-3.5" />
-                </button>
+            <div key={m.id}>
+              {/* ✅ Unread divider */}
+              {item.isFirstUnread && (
+                <div ref={firstUnreadRef} className="flex items-center gap-2 my-3">
+                  <div className="flex-1 h-px bg-emerald-500/40" />
+                  <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-3 py-1 rounded-full">
+                    {unreadCount} naye message
+                  </span>
+                  <div className="flex-1 h-px bg-emerald-500/40" />
+                </div>
               )}
 
-              <div
-                onContextMenu={(e) => { e.preventDefault(); setDeleteModal({ id: m.id, mine }); }}
-                onDoubleClick={() => { setReplyTo(m); inputRef.current?.focus(); }}
-                onTouchStart={() => handleTouchStart(m.id, mine)}
-                onTouchEnd={handleTouchEnd}
-                onTouchMove={handleTouchEnd}
-                className={`max-w-[85%] rounded-2xl px-3 py-2 shadow-sm cursor-pointer select-none backdrop-blur-sm
-                  ${mine
-                    ? "bg-emerald-700/90 rounded-tr-none text-white"
-                    : "bg-slate-800/90 rounded-tl-none text-slate-100"
-                  }`}
-              >
-                {!mine && <p className="text-[10px] font-black text-emerald-400 mb-0.5 uppercase">{m.username}</p>}
+              <div id={`msg-${m.id}`}
+                className={`flex ${mine ? "justify-end" : "justify-start"} mb-1 group transition-all duration-300`}>
 
-                {/* Reply preview */}
-                {m.reply_to_id && (
-                  <div
-                    onClick={() => jumpToMessage(m.reply_to_id)}
-                    className={`mb-1.5 px-2 py-1.5 rounded-lg border-l-2 border-emerald-400 cursor-pointer hover:opacity-80
-                      ${mine ? "bg-emerald-800/50" : "bg-slate-700/60"}`}
-                  >
-                    <p className="text-[10px] font-bold text-emerald-400 mb-0.5">
-                      {m.reply_to_user === username ? "Aap" : m.reply_to_user}
-                    </p>
-                    <p className="text-[11px] opacity-80 truncate max-w-[200px]">{m.reply_to_text}</p>
-                  </div>
+                {!mine && (
+                  <button onClick={() => { setReplyTo(m); textareaRef.current?.focus(); }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity mr-1 self-end mb-2 p-1.5 rounded-full bg-slate-700/80 text-slate-400 hover:text-white hover:bg-slate-600">
+                    <CornerUpLeft className="size-3.5" />
+                  </button>
                 )}
 
-                {renderContent(m)}
+                <div
+                  onContextMenu={(e) => { e.preventDefault(); setDeleteModal({ id: m.id, mine }); }}
+                  onDoubleClick={() => { setReplyTo(m); textareaRef.current?.focus(); }}
+                  onTouchStart={() => handleTouchStart(m.id, mine)}
+                  onTouchEnd={handleTouchEnd}
+                  onTouchMove={handleTouchEnd}
+                  className={`max-w-[85%] rounded-2xl px-3 py-2 shadow-sm cursor-pointer select-none backdrop-blur-sm
+                    ${mine
+                      ? "bg-emerald-700/90 rounded-tr-none text-white"
+                      : "bg-slate-800/90 rounded-tl-none text-slate-100"
+                    }`}
+                >
+                  {!mine && <p className="text-[10px] font-black text-emerald-400 mb-0.5 uppercase">{m.username}</p>}
 
-                <div className="flex items-center justify-end gap-1 mt-1 opacity-70">
-                  <span className="text-[9px] font-medium">
-                    {new Date(m.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}
-                  </span>
-                  {mine && (m.is_seen
-                    ? <CheckCheck className="size-3 text-blue-400" />
-                    : <Check className="size-3 text-slate-300" />
+                  {m.reply_to_id && (
+                    <div onClick={() => jumpToMessage(m.reply_to_id)}
+                      className={`mb-1.5 px-2 py-1.5 rounded-lg border-l-2 border-emerald-400 cursor-pointer hover:opacity-80
+                        ${mine ? "bg-emerald-800/50" : "bg-slate-700/60"}`}>
+                      <p className="text-[10px] font-bold text-emerald-400 mb-0.5">
+                        {m.reply_to_user === username ? "Aap" : m.reply_to_user}
+                      </p>
+                      <p className="text-[11px] opacity-80 truncate max-w-[200px]">{m.reply_to_text}</p>
+                    </div>
                   )}
-                </div>
-              </div>
 
-              {mine && (
-                <button
-                  onClick={() => { setReplyTo(m); inputRef.current?.focus(); }}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 mt-auto mb-2 p-1.5 rounded-full bg-slate-700/80 text-slate-400 hover:text-white hover:bg-slate-600 self-end">
-                  <CornerUpLeft className="size-3.5" />
-                </button>
-              )}
+                  {renderContent(m)}
+
+                  <div className="flex items-center justify-end gap-1 mt-1 opacity-70">
+                    <span className="text-[9px] font-medium">
+                      {new Date(m.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}
+                    </span>
+                    {mine && (m.is_seen
+                      ? <CheckCheck className="size-3 text-blue-400" />
+                      : <Check className="size-3 text-slate-300" />
+                    )}
+                  </div>
+                </div>
+
+                {mine && (
+                  <button onClick={() => { setReplyTo(m); textareaRef.current?.focus(); }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 self-end mb-2 p-1.5 rounded-full bg-slate-700/80 text-slate-400 hover:text-white hover:bg-slate-600">
+                    <CornerUpLeft className="size-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
           );
         })}
         <div ref={bottomRef} />
       </main>
 
-      {/* ── Unread badge ── */}
+      {/* Unread badge */}
       {unreadCount > 0 && !isAtBottom && (
         <button onClick={scrollToBottom}
-          className="fixed bottom-24 right-4 z-40 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full px-3 py-2 text-sm font-bold shadow-lg flex items-center gap-1.5 animate-bounce">
-          <span>↓</span>
-          <span>{unreadCount} naya</span>
+          className="fixed bottom-28 right-4 z-40 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full px-3 py-2 text-sm font-bold shadow-lg flex items-center gap-1.5">
+          ↓ {unreadCount} naya
         </button>
       )}
 
-      {/* ── File Preview ── */}
+      {/* File Preview */}
       {selectedFile && (
-        <div className="fixed bottom-[68px] left-0 right-0 bg-[#1e293b]/95 backdrop-blur border-t border-slate-700 p-3 z-40">
+        <div className="fixed bottom-[72px] left-0 right-0 bg-[#1e293b]/95 backdrop-blur border-t border-slate-700 p-3 z-40">
           <div className="mx-auto max-w-4xl flex items-center gap-3">
             {filePreview && selectedFile.type.startsWith("image/") && (
               <img src={filePreview} className="size-14 object-cover rounded-lg shrink-0" />
@@ -592,10 +687,8 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
         </div>
       )}
 
-      {/* ── Footer — Reply bar + Input ── */}
+      {/* Footer */}
       <footer className="fixed bottom-0 w-full border-t border-slate-800 bg-[#1e293b]/95 backdrop-blur z-50">
-
-        {/* Reply bar */}
         {replyTo && (
           <div className="flex items-center gap-2 px-4 pt-2 pb-1 border-b border-slate-700/50">
             <Reply className="size-4 text-emerald-400 shrink-0" />
@@ -613,24 +706,25 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
           </div>
         )}
 
-        <div className="mx-auto flex max-w-4xl gap-2 items-center p-3">
+        <div className="mx-auto flex max-w-4xl gap-2 items-end p-3">
           <input ref={fileInputRef} type="file"
             accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
             onChange={handleFileSelect} className="hidden" />
           <button onClick={() => fileInputRef.current?.click()}
-            className="p-2.5 bg-slate-700 rounded-full text-slate-300 hover:bg-slate-600 transition-colors">
+            className="p-2.5 bg-slate-700 rounded-full text-slate-300 hover:bg-slate-600 transition-colors shrink-0 mb-0.5">
             <Paperclip className="size-5" />
           </button>
-          <input
-            ref={inputRef}
+          <textarea
+            ref={textareaRef}
             value={draft}
             onChange={(e) => handleTyping(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && !selectedFile && sendMessage()}
             placeholder="Type a message..."
-            className="flex-1 bg-slate-900 rounded-2xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500/50 text-sm"
+            rows={1}
+            className="flex-1 bg-slate-900 rounded-2xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500/50 text-sm resize-none overflow-hidden min-h-[42px] max-h-[120px] leading-relaxed"
+            style={{ height: "42px" }}
           />
           <button onClick={selectedFile ? sendFile : sendMessage} disabled={uploading}
-            className="bg-emerald-600 p-2.5 rounded-full hover:bg-emerald-500 shadow-lg transition-all active:scale-95 disabled:opacity-50">
+            className="bg-emerald-600 p-2.5 rounded-full hover:bg-emerald-500 shadow-lg transition-all active:scale-95 disabled:opacity-50 shrink-0 mb-0.5">
             {uploading
               ? <Loader2 className="size-5 text-white animate-spin" />
               : <Send className="size-5 text-white" />}
@@ -638,7 +732,36 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
         </div>
       </footer>
 
-      {/* ── Wallpaper Panel ── */}
+      {/* Clear Chat Confirm Modal */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center px-4"
+          onClick={() => setShowClearConfirm(false)}>
+          <div className="bg-[#1e293b] rounded-2xl w-full max-w-sm p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}>
+            <div className="flex flex-col items-center gap-3 mb-5">
+              <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
+                <Eraser className="size-6 text-red-400" />
+              </div>
+              <h2 className="font-bold text-white text-lg">Chat Saaf Karo?</h2>
+              <p className="text-sm text-slate-400 text-center">
+                Sirf aapke liye chat saaf hogi। Doosre user ke paas messages rahenge।
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setShowClearConfirm(false)}
+                className="flex-1 py-3 rounded-xl border border-slate-600 text-slate-300 hover:bg-slate-700 transition-colors text-sm font-medium">
+                Cancel
+              </button>
+              <button onClick={clearChatForMe}
+                className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white transition-colors text-sm font-medium">
+                Saaf Karo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Wallpaper Panel */}
       {showWallpaperPanel && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-end justify-center"
           onClick={() => setShowWallpaperPanel(false)}>
@@ -677,7 +800,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
         </div>
       )}
 
-      {/* ── Delete Modal ── */}
+      {/* Delete Modal */}
       {deleteModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-end justify-center pb-10"
           onClick={() => setDeleteModal(null)}>
@@ -702,7 +825,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
         </div>
       )}
 
-      {/* ── Fullscreen Image ── */}
+      {/* Fullscreen Image */}
       {fullscreenImg && (
         <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center"
           onClick={() => setFullscreenImg(null)}>
