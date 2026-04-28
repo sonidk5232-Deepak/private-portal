@@ -32,10 +32,14 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
   const [otherUser, setOtherUser]         = useState<any>(null);
   const [othersTyping, setOthersTyping]   = useState(false);
   const [unreadCount, setUnreadCount]     = useState(0);
-  const [isAtBottom, setIsAtBottom]       = useState(true);
+
+  // ✅ KEY FIX: isAtBottom shuru mein FALSE — taaki seen mark na ho jab tak scroll nahi karte
+  const [isAtBottom, setIsAtBottom]       = useState(false);
+
   const [replyTo, setReplyTo]             = useState<any>(null);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const [showWallpaperPanel, setShowWallpaperPanel] = useState(false);
-  const [lastSeenTimer, setLastSeenTimer] = useState(0); // force re-render for live last seen
+  const [lastSeenTimer, setLastSeenTimer] = useState(0);
   const [wallpaper, setWallpaper]         = useState<string>(() =>
     typeof window !== "undefined" ? (localStorage.getItem("chat_wallpaper") || "") : ""
   );
@@ -53,7 +57,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
   const typingChRef      = useRef<any>(null);
   const firstUnreadId    = useRef<string | null>(null);
 
-  // ─── Last seen live update (har 30 sec mein re-render) ───────────────────
+  // ─── Last seen live timer ─────────────────────────────────────────────────
   useEffect(() => {
     const interval = setInterval(() => setLastSeenTimer((t) => t + 1), 30000);
     return () => clearInterval(interval);
@@ -78,17 +82,21 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
       if (data) {
         setAllMessages(data);
 
-        // ✅ FIX: Portal kholte hi unseen messages dhundo
         const unseenMsgs = data.filter((m) => m.user_id !== userId && !m.is_seen);
+
         if (unseenMsgs.length > 0) {
+          // ✅ Unread hain — isAtBottom FALSE rakho, count set karo
           setUnreadCount(unseenMsgs.length);
           firstUnreadId.current = unseenMsgs[0].id;
-          // Pehle unseen message tak scroll karo
+          setIsAtBottom(false); // ✅ seen mark NAHI hoga ab
+
+          // Pehle unread message tak scroll karo
           setTimeout(() => {
-            firstUnreadRef.current?.scrollIntoView({ behavior: "instant", block: "start" });
-          }, 150);
+            firstUnreadRef.current?.scrollIntoView({ behavior: "instant", block: "center" });
+          }, 200);
         } else {
-          // Koi unseen nahi — bottom par jao
+          // Koi unread nahi — seedha bottom par jao
+          setIsAtBottom(true);
           setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "instant" }), 100);
         }
       }
@@ -125,8 +133,9 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     return () => { supabase.removeChannel(channel); };
   }, [supabase, userId]);
 
-  // ─── 2. Blue Tick ─────────────────────────────────────────────────────────
+  // ─── 2. Blue Tick — SIRF jab isAtBottom TRUE ho ──────────────────────────
   useEffect(() => {
+    if (!isAtBottom) return; // ✅ Bottom par nahi hain to seen mat karo
     const markAsSeen = async () => {
       const unreadIds = allMessages
         .filter((m) => m.user_id !== userId && !m.is_seen)
@@ -135,73 +144,44 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
         await supabase.from("messages").update({ is_seen: true }).in("id", unreadIds);
       }
     };
-    if (allMessages.length > 0 && isAtBottom) markAsSeen();
+    if (allMessages.length > 0) markAsSeen();
   }, [allMessages, userId, supabase, isAtBottom]);
 
   // ─── 3. Online / Last Seen ────────────────────────────────────────────────
-  // ✅ FIX: goOnline mein last_seen_at bilkul mat chheena
-  //         Sirf goOffline mein last_seen_at set karo
   useEffect(() => {
     const goOnline = async () => {
-      // Pehle check karo profile exist karta hai ya nahi
       const { data: existing } = await supabase
-        .from("profiles")
-        .select("id, last_seen_at")
-        .eq("id", userId)
-        .maybeSingle();
-
+        .from("profiles").select("id").eq("id", userId).maybeSingle();
       if (existing) {
-        // Profile hai — sirf is_online true karo, last_seen_at mat chheena
         await supabase.from("profiles")
-          .update({ is_online: true, username })
-          .eq("id", userId);
+          .update({ is_online: true, username }).eq("id", userId);
       } else {
-        // Naya profile banao
-        await supabase.from("profiles").insert({
-          id: userId, username,
-          is_online: true,
-          last_seen_at: null,
-        });
+        await supabase.from("profiles")
+          .insert({ id: userId, username, is_online: true, last_seen_at: null });
       }
     };
-
     const goOffline = async () => {
       await supabase.from("profiles")
-        .update({
-          is_online: false,
-          last_seen_at: new Date().toISOString(), // ✅ Sirf yahan set karo
-        })
+        .update({ is_online: false, last_seen_at: new Date().toISOString() })
         .eq("id", userId);
     };
 
     goOnline();
-
-    const handleVisibility = () => {
-      if (document.hidden) goOffline();
-      else goOnline();
-    };
-
+    const handleVisibility = () => { if (document.hidden) goOffline(); else goOnline(); };
     document.addEventListener("visibilitychange", handleVisibility);
     window.addEventListener("beforeunload", goOffline);
 
-    // Doosre user ka data lo
     const fetchOther = async () => {
-      const { data } = await supabase
-        .from("profiles")
+      const { data } = await supabase.from("profiles")
         .select("id, username, is_online, last_seen_at")
-        .neq("id", userId)
-        .limit(1)
-        .maybeSingle();
+        .neq("id", userId).limit(1).maybeSingle();
       if (data) setOtherUser(data);
     };
     fetchOther();
 
-    // Realtime profile watch
     const profileCh = supabase.channel("profiles-watch")
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, (payload) => {
-        if (payload.new && (payload.new as any).id !== userId) {
-          setOtherUser(payload.new);
-        }
+        if (payload.new && (payload.new as any).id !== userId) setOtherUser(payload.new);
       }).subscribe();
 
     return () => {
@@ -217,7 +197,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     const ch = supabase.channel("typing-v3", {
       config: { broadcast: { self: false, ack: false } },
     });
-
     ch.on("broadcast", { event: "typing" }, ({ payload }) => {
       if (!payload || payload.userId === userId) return;
       if (payload.isTyping) {
@@ -229,40 +208,25 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
         if (typingClearTimer.current) clearTimeout(typingClearTimer.current);
       }
     });
-
-    ch.subscribe((status) => {
-      if (status === "SUBSCRIBED") typingChRef.current = ch;
-    });
-
-    return () => {
-      typingChRef.current = null;
-      supabase.removeChannel(ch);
-    };
+    ch.subscribe((status) => { if (status === "SUBSCRIBED") typingChRef.current = ch; });
+    return () => { typingChRef.current = null; supabase.removeChannel(ch); };
   }, [userId, supabase]);
 
   const sendTypingSignal = useCallback((isTyping: boolean) => {
-    typingChRef.current?.send({
-      type: "broadcast", event: "typing",
-      payload: { userId, isTyping },
-    });
+    typingChRef.current?.send({ type: "broadcast", event: "typing", payload: { userId, isTyping } });
   }, [userId]);
 
   const handleTyping = useCallback((value: string) => {
     setDraft(value);
     setTimeout(autoResize, 0);
-
-    if (!isTypingRef.current) {
-      isTypingRef.current = true;
-      sendTypingSignal(true);
-    }
+    if (!isTypingRef.current) { isTypingRef.current = true; sendTypingSignal(true); }
     if (typingTimeout.current) clearTimeout(typingTimeout.current);
     typingTimeout.current = setTimeout(() => {
-      isTypingRef.current = false;
-      sendTypingSignal(false);
+      isTypingRef.current = false; sendTypingSignal(false);
     }, 2000);
   }, [sendTypingSignal]);
 
-  // ─── 5. Scroll + Unread ───────────────────────────────────────────────────
+  // ─── 5. Scroll handler ────────────────────────────────────────────────────
   const handleScroll = useCallback(() => {
     const el = mainRef.current;
     if (!el) return;
@@ -285,13 +249,10 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
   const sendMessage = async () => {
     if (!draft.trim()) return;
     const text = draft.trim();
-    setDraft("");
-    setReplyTo(null);
+    setDraft(""); setReplyTo(null);
     if (textareaRef.current) textareaRef.current.style.height = "42px";
-
     if (typingTimeout.current) clearTimeout(typingTimeout.current);
-    isTypingRef.current = false;
-    sendTypingSignal(false);
+    isTypingRef.current = false; sendTypingSignal(false);
 
     const msgData: any = { user_id: userId, username, text, is_seen: false, deleted_for: [] };
     if (replyTo) {
@@ -299,7 +260,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
       msgData.reply_to_text = replyTo.text || replyTo.file_name || "📎 File";
       msgData.reply_to_user = replyTo.username;
     }
-
     const { data } = await supabase.from("messages").insert([msgData]).select();
     if (data) {
       setAllMessages((prev) => {
@@ -339,8 +299,8 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
 
       const { error: upErr } = await supabase.storage.from("chat-files").upload(filePath, selectedFile);
       if (upErr) throw upErr;
-      const { data: urlData } = await supabase.storage
-        .from("chat-files").createSignedUrl(filePath, 60 * 60 * 24 * 365);
+      const { data: urlData } = await supabase.storage.from("chat-files")
+        .createSignedUrl(filePath, 60 * 60 * 24 * 365);
 
       const msgData: any = {
         user_id: userId, username, text: selectedFile.name,
@@ -353,7 +313,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
         msgData.reply_to_text = replyTo.text || replyTo.file_name || "📎 File";
         msgData.reply_to_user = replyTo.username;
       }
-
       const { data, error } = await supabase.from("messages").insert([msgData]).select();
       if (error) throw error;
       if (data) {
@@ -386,43 +345,37 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
 
   // ─── 9. Clear Chat ────────────────────────────────────────────────────────
   const clearChatForMe = async () => {
-    // Sabke messages mein apna userId deleted_for mein daalo
     const visibleMsgs = allMessages.filter((m) => !(m.deleted_for || []).includes(userId));
     for (const m of visibleMsgs) {
       const updated = [...(m.deleted_for || []), userId];
       await supabase.from("messages").update({ deleted_for: updated }).eq("id", m.id);
     }
-    setAllMessages((prev) =>
-      prev.map((m) => ({
-        ...m,
-        deleted_for: [...(m.deleted_for || []), userId],
-      }))
-    );
+    setAllMessages((prev) => prev.map((m) => ({
+      ...m, deleted_for: [...(m.deleted_for || []), userId],
+    })));
     setShowClearConfirm(false);
   };
 
   // ─── 10. Jump to reply ────────────────────────────────────────────────────
-  const jumpToMessage = (id: string) => {
-    const el = document.getElementById(`msg-${id}`);
-    if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
-    el.classList.add("ring-2", "ring-emerald-400");
-    setTimeout(() => el.classList.remove("ring-2", "ring-emerald-400"), 1500);
-  };
+  const jumpToMessage = useCallback((id: string) => {
+    const bubble = document.getElementById(`bubble-${id}`);
+    if (!bubble) return;
+    bubble.scrollIntoView({ behavior: "smooth", block: "center" });
+    setHighlightedId(id);
+    setTimeout(() => setHighlightedId(null), 1500);
+  }, []);
 
   // ─── 11. Helpers ──────────────────────────────────────────────────────────
-  // ✅ FIX: Accurate last seen — lastSeenTimer se live update hoga
   const formatLastSeen = (ts: string) => {
     if (!ts) return "pehle";
-    const d   = new Date(ts);
-    const now = new Date();
+    const d = new Date(ts), now = new Date();
     const sec = Math.floor((now.getTime() - d.getTime()) / 1000);
-    if (sec < 30)   return "abhi abhi";
-    if (sec < 60)   return `${sec} second pehle`;
+    if (sec < 30)  return "abhi abhi";
+    if (sec < 60)  return `${sec} second pehle`;
     const min = Math.floor(sec / 60);
-    if (min < 60)   return `${min} minute pehle`;
-    const hr  = Math.floor(min / 60);
-    if (hr < 24)    return `aaj ${d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })} ko`;
+    if (min < 60)  return `${min} minute pehle`;
+    const hr = Math.floor(min / 60);
+    if (hr < 24)   return `aaj ${d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })} ko`;
     const yest = new Date(now); yest.setDate(yest.getDate() - 1);
     if (d.toDateString() === yest.toDateString())
       return `kal ${d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })} ko`;
@@ -437,18 +390,14 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
   };
 
   const applyWallpaper = (url: string) => {
-    setWallpaper(url);
-    localStorage.setItem("chat_wallpaper", url);
-    setShowWallpaperPanel(false);
-    setCustomUrl("");
+    setWallpaper(url); localStorage.setItem("chat_wallpaper", url);
+    setShowWallpaperPanel(false); setCustomUrl("");
   };
 
   const handleTouchStart = (id: string, mine: boolean) => {
     longPressTimer.current = setTimeout(() => setDeleteModal({ id, mine }), 600);
   };
-  const handleTouchEnd = () => {
-    if (longPressTimer.current) clearTimeout(longPressTimer.current);
-  };
+  const handleTouchEnd = () => { if (longPressTimer.current) clearTimeout(longPressTimer.current); };
 
   // ─── 12. Render content ───────────────────────────────────────────────────
   const renderContent = (m: any) => {
@@ -481,9 +430,8 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
 
   // ─── 13. Timeline ─────────────────────────────────────────────────────────
   const visibleMessages = allMessages.filter((m) => !(m.deleted_for || []).includes(userId));
-
   const timeline = visibleMessages.reduce((acc: any[], m: any, i: number, arr: any[]) => {
-    const date     = new Date(m.created_at).toDateString();
+    const date = new Date(m.created_at).toDateString();
     const prevDate = i > 0 ? new Date(arr[i - 1].created_at).toDateString() : null;
     if (date !== prevDate) {
       const today = new Date().toDateString();
@@ -517,7 +465,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
       </span>
     );
     if (!otherUser.last_seen_at) return null;
-    // lastSeenTimer se live update hoga
     return (
       <span key={lastSeenTimer} className="text-[11px] text-slate-500">
         Last seen {formatLastSeen(otherUser.last_seen_at)}
@@ -544,7 +491,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
           <div className="min-h-[16px] flex items-center">{headerSubtitle()}</div>
         </div>
         <div className="flex items-center gap-2">
-          {/* Clear Chat Button */}
           <button onClick={() => setShowClearConfirm(true)} title="Chat saaf karo"
             className="p-1.5 rounded-full text-slate-400 hover:text-red-400 hover:bg-slate-700 transition-colors">
             <Eraser className="size-5" />
@@ -560,7 +506,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
 
       {/* Messages */}
       <main ref={mainRef} onScroll={handleScroll}
-        className="relative z-10 flex-1 overflow-y-auto p-4 space-y-1 pb-36">
+        className="relative z-10 flex-1 overflow-y-auto p-4 pb-36">
 
         {timeline.map((item: any) => {
           if (item.kind === "date") return (
@@ -573,52 +519,60 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
 
           const m    = item.message;
           const mine = m.user_id === userId;
+          const isHighlighted = highlightedId === m.id;
 
           return (
             <div key={m.id}>
-              {/* ✅ Unread divider */}
+              {/* ✅ Unread divider — clearly visible */}
               {item.isFirstUnread && (
-                <div ref={firstUnreadRef} className="flex items-center gap-2 my-3">
-                  <div className="flex-1 h-px bg-emerald-500/40" />
-                  <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-3 py-1 rounded-full">
-                    {unreadCount} naye message
+                <div ref={firstUnreadRef} className="flex items-center gap-2 my-4">
+                  <div className="flex-1 h-px bg-emerald-500/50" />
+                  <span className="text-[11px] text-emerald-400 font-bold bg-emerald-500/15 border border-emerald-500/30 px-3 py-1 rounded-full whitespace-nowrap">
+                    ↓ {unreadCount} naye message
                   </span>
-                  <div className="flex-1 h-px bg-emerald-500/40" />
+                  <div className="flex-1 h-px bg-emerald-500/50" />
                 </div>
               )}
 
-              <div id={`msg-${m.id}`}
-                className={`flex ${mine ? "justify-end" : "justify-start"} mb-1 group transition-all duration-300`}>
+              <div className={`flex ${mine ? "justify-end" : "justify-start"} mb-2 group`}>
 
                 {!mine && (
                   <button onClick={() => { setReplyTo(m); textareaRef.current?.focus(); }}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity mr-1 self-end mb-2 p-1.5 rounded-full bg-slate-700/80 text-slate-400 hover:text-white hover:bg-slate-600">
+                    className="opacity-0 group-hover:opacity-100 transition-opacity mr-1 self-end mb-1 p-1.5 rounded-full bg-slate-700/80 text-slate-400 hover:text-white hover:bg-slate-600">
                     <CornerUpLeft className="size-3.5" />
                   </button>
                 )}
 
                 <div
+                  id={`bubble-${m.id}`}
                   onContextMenu={(e) => { e.preventDefault(); setDeleteModal({ id: m.id, mine }); }}
                   onDoubleClick={() => { setReplyTo(m); textareaRef.current?.focus(); }}
                   onTouchStart={() => handleTouchStart(m.id, mine)}
                   onTouchEnd={handleTouchEnd}
                   onTouchMove={handleTouchEnd}
                   className={`max-w-[85%] rounded-2xl px-3 py-2 shadow-sm cursor-pointer select-none backdrop-blur-sm
-                    ${mine
-                      ? "bg-emerald-700/90 rounded-tr-none text-white"
-                      : "bg-slate-800/90 rounded-tl-none text-slate-100"
-                    }`}
+                    transition-all duration-300
+                    ${mine ? "bg-emerald-700/90 rounded-tr-none text-white" : "bg-slate-800/90 rounded-tl-none text-slate-100"}
+                    ${isHighlighted
+                      ? mine ? "ring-2 ring-white/70 bg-emerald-500/90 scale-[1.02]"
+                               : "ring-2 ring-emerald-400 bg-slate-600/90 scale-[1.02]"
+                      : ""}`}
                 >
                   {!mine && <p className="text-[10px] font-black text-emerald-400 mb-0.5 uppercase">{m.username}</p>}
 
                   {m.reply_to_id && (
-                    <div onClick={() => jumpToMessage(m.reply_to_id)}
-                      className={`mb-1.5 px-2 py-1.5 rounded-lg border-l-2 border-emerald-400 cursor-pointer hover:opacity-80
-                        ${mine ? "bg-emerald-800/50" : "bg-slate-700/60"}`}>
+                    <div
+                      onClick={(e) => { e.stopPropagation(); jumpToMessage(m.reply_to_id); }}
+                      onTouchEnd={(e) => { e.stopPropagation(); jumpToMessage(m.reply_to_id); }}
+                      className={`mb-1.5 px-2 py-1.5 rounded-lg border-l-[3px] border-emerald-400
+                        cursor-pointer active:opacity-60 transition-opacity
+                        ${mine ? "bg-emerald-800/60" : "bg-slate-700/70"}`}>
                       <p className="text-[10px] font-bold text-emerald-400 mb-0.5">
-                        {m.reply_to_user === username ? "Aap" : m.reply_to_user}
+                        ↩ {m.reply_to_user === username ? "Aap" : m.reply_to_user}
                       </p>
-                      <p className="text-[11px] opacity-80 truncate max-w-[200px]">{m.reply_to_text}</p>
+                      <p className="text-[11px] opacity-75 truncate max-w-[200px] leading-snug">
+                        {m.reply_to_text}
+                      </p>
                     </div>
                   )}
 
@@ -637,7 +591,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
 
                 {mine && (
                   <button onClick={() => { setReplyTo(m); textareaRef.current?.focus(); }}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 self-end mb-2 p-1.5 rounded-full bg-slate-700/80 text-slate-400 hover:text-white hover:bg-slate-600">
+                    className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 self-end mb-1 p-1.5 rounded-full bg-slate-700/80 text-slate-400 hover:text-white hover:bg-slate-600">
                     <CornerUpLeft className="size-3.5" />
                   </button>
                 )}
@@ -648,11 +602,12 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
         <div ref={bottomRef} />
       </main>
 
-      {/* Unread badge */}
+      {/* ✅ Unread badge — neeche scroll karne ke liye */}
       {unreadCount > 0 && !isAtBottom && (
         <button onClick={scrollToBottom}
-          className="fixed bottom-28 right-4 z-40 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full px-3 py-2 text-sm font-bold shadow-lg flex items-center gap-1.5">
-          ↓ {unreadCount} naya
+          className="fixed bottom-28 right-4 z-40 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full pl-3 pr-4 py-2.5 text-sm font-bold shadow-xl flex items-center gap-2 border border-emerald-400/30">
+          <span className="text-base">↓</span>
+          <span>{unreadCount} naya message</span>
         </button>
       )}
 
@@ -705,7 +660,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
             </button>
           </div>
         )}
-
         <div className="mx-auto flex max-w-4xl gap-2 items-end p-3">
           <input ref={fileInputRef} type="file"
             accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
@@ -725,14 +679,12 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
           />
           <button onClick={selectedFile ? sendFile : sendMessage} disabled={uploading}
             className="bg-emerald-600 p-2.5 rounded-full hover:bg-emerald-500 shadow-lg transition-all active:scale-95 disabled:opacity-50 shrink-0 mb-0.5">
-            {uploading
-              ? <Loader2 className="size-5 text-white animate-spin" />
-              : <Send className="size-5 text-white" />}
+            {uploading ? <Loader2 className="size-5 text-white animate-spin" /> : <Send className="size-5 text-white" />}
           </button>
         </div>
       </footer>
 
-      {/* Clear Chat Confirm Modal */}
+      {/* Clear Chat Modal */}
       {showClearConfirm && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center px-4"
           onClick={() => setShowClearConfirm(false)}>
