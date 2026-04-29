@@ -5,187 +5,210 @@ import {
   Check, CheckCheck, Loader2, LogOut,
   Paperclip, Send, X, FileText, Download,
   Trash2, Image as ImageIcon, Reply, CornerUpLeft,
-  Eraser, Palette
+  Eraser, Palette, Info, Clock
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 
 // ─── THEMES ───────────────────────────────────────────────────────────────────
 const THEMES = {
-  dark: {
-    name: "Dark",
-    preview: ["#0f172a", "#1e293b", "#10b981"],
-    bg: "#0f172a",
-    surface: "#1e293b",
-    surfaceHover: "#263548",
-    border: "#334155",
-    headerBg: "rgba(30,41,59,0.97)",
-    inputBg: "#0f172a",
-    myBubble: "rgba(16,185,129,0.88)",
+  aurora: {
+    name: "Aurora",
+    preview: ["#070b14", "#0d1f3c", "#7c3aed"],
+    bg: "#070b14",
+    gradientA: "#0a1628",
+    gradientB: "#0d2240",
+    orb1: "rgba(124,58,237,0.18)",
+    orb2: "rgba(16,185,129,0.12)",
+    orb3: "rgba(59,130,246,0.10)",
+    surface: "rgba(255,255,255,0.045)",
+    surfaceHover: "rgba(255,255,255,0.08)",
+    surfaceSolid: "#0d1f3c",
+    border: "rgba(255,255,255,0.09)",
+    borderGlow: "rgba(124,58,237,0.4)",
+    headerBg: "rgba(7,11,20,0.85)",
+    inputBg: "rgba(255,255,255,0.05)",
+    myBubble: "linear-gradient(135deg, rgba(109,40,217,0.85) 0%, rgba(37,99,235,0.80) 100%)",
+    myBubbleSolid: "#6d28d9",
     myBubbleText: "#ffffff",
-    otherBubble: "rgba(30,41,59,0.92)",
+    otherBubble: "rgba(255,255,255,0.07)",
     otherBubbleText: "#e2e8f0",
-    accent: "#10b981",
-    accentText: "#ffffff",
-    accentSoft: "rgba(16,185,129,0.15)",
-    dateBg: "rgba(15,23,42,0.85)",
-    dateText: "#94a3b8",
-    time: "rgba(255,255,255,0.55)",
-    sendBtn: "#10b981",
-    // ✅ FIX: removed duplicate `name` property that was here
-  },
-  ocean: {
-    name: "Ocean Blue",
-    preview: ["#0a1628", "#0d2240", "#3b82f6"],
-    bg: "#0a1628",
-    surface: "#0d2240",
-    surfaceHover: "#102a50",
-    border: "#1e3a5f",
-    headerBg: "rgba(13,34,64,0.97)",
-    inputBg: "#071020",
-    myBubble: "rgba(37,99,235,0.90)",
-    myBubbleText: "#ffffff",
-    otherBubble: "rgba(13,34,64,0.95)",
-    otherBubbleText: "#bfdbfe",
-    accent: "#3b82f6",
-    accentText: "#ffffff",
-    accentSoft: "rgba(59,130,246,0.15)",
-    dateBg: "rgba(10,22,40,0.85)",
-    dateText: "#7dd3fc",
-    time: "rgba(255,255,255,0.5)",
-    sendBtn: "#2563eb",
-  },
-  purple: {
-    name: "Purple Haze",
-    preview: ["#0d0a1e", "#1a1035", "#8b5cf6"],
-    bg: "#0d0a1e",
-    surface: "#1a1035",
-    surfaceHover: "#211545",
-    border: "#2d1f50",
-    headerBg: "rgba(26,16,53,0.97)",
-    inputBg: "#080615",
-    myBubble: "rgba(109,40,217,0.88)",
-    myBubbleText: "#ffffff",
-    otherBubble: "rgba(26,16,53,0.95)",
-    otherBubbleText: "#e9d5ff",
     accent: "#8b5cf6",
+    accent2: "#10b981",
     accentText: "#ffffff",
     accentSoft: "rgba(139,92,246,0.15)",
-    dateBg: "rgba(13,10,30,0.85)",
-    dateText: "#c4b5fd",
-    time: "rgba(255,255,255,0.5)",
-    sendBtn: "#7c3aed",
+    dateBg: "rgba(7,11,20,0.75)",
+    dateText: "#7c8fa8",
+    time: "rgba(255,255,255,0.40)",
+    sendBtn: "linear-gradient(135deg, #7c3aed 0%, #2563eb 100%)",
+    sendBtnSolid: "#7c3aed",
+    tickSeen: "#818cf8",
+  },
+  emerald: {
+    name: "Emerald",
+    preview: ["#040d0a", "#051a14", "#10b981"],
+    bg: "#040d0a",
+    gradientA: "#051a14",
+    gradientB: "#061e17",
+    orb1: "rgba(16,185,129,0.15)",
+    orb2: "rgba(52,211,153,0.10)",
+    orb3: "rgba(6,182,212,0.08)",
+    surface: "rgba(255,255,255,0.045)",
+    surfaceHover: "rgba(255,255,255,0.08)",
+    surfaceSolid: "#061e17",
+    border: "rgba(255,255,255,0.08)",
+    borderGlow: "rgba(16,185,129,0.4)",
+    headerBg: "rgba(4,13,10,0.85)",
+    inputBg: "rgba(255,255,255,0.05)",
+    myBubble: "linear-gradient(135deg, rgba(13,148,136,0.88) 0%, rgba(5,150,105,0.82) 100%)",
+    myBubbleSolid: "#0d9488",
+    myBubbleText: "#ffffff",
+    otherBubble: "rgba(255,255,255,0.07)",
+    otherBubbleText: "#d1fae5",
+    accent: "#10b981",
+    accent2: "#06b6d4",
+    accentText: "#ffffff",
+    accentSoft: "rgba(16,185,129,0.15)",
+    dateBg: "rgba(4,13,10,0.75)",
+    dateText: "#6b8f7a",
+    time: "rgba(255,255,255,0.38)",
+    sendBtn: "linear-gradient(135deg, #059669 0%, #0891b2 100%)",
+    sendBtnSolid: "#059669",
+    tickSeen: "#34d399",
   },
   rose: {
-    name: "Rose Gold",
-    preview: ["#1a0a0e", "#2d1018", "#f43f5e"],
-    bg: "#1a0a0e",
-    surface: "#2d1018",
-    surfaceHover: "#3d1520",
-    border: "#4d1a28",
-    headerBg: "rgba(45,16,24,0.97)",
-    inputBg: "#120608",
-    myBubble: "rgba(225,29,72,0.85)",
+    name: "Rose",
+    preview: ["#0f060a", "#1e0d14", "#f43f5e"],
+    bg: "#0f060a",
+    gradientA: "#1a0812",
+    gradientB: "#1e0d14",
+    orb1: "rgba(244,63,94,0.15)",
+    orb2: "rgba(251,113,133,0.10)",
+    orb3: "rgba(217,70,239,0.08)",
+    surface: "rgba(255,255,255,0.045)",
+    surfaceHover: "rgba(255,255,255,0.08)",
+    surfaceSolid: "#1e0d14",
+    border: "rgba(255,255,255,0.08)",
+    borderGlow: "rgba(244,63,94,0.4)",
+    headerBg: "rgba(15,6,10,0.85)",
+    inputBg: "rgba(255,255,255,0.05)",
+    myBubble: "linear-gradient(135deg, rgba(225,29,72,0.85) 0%, rgba(168,85,247,0.75) 100%)",
+    myBubbleSolid: "#e11d48",
     myBubbleText: "#ffffff",
-    otherBubble: "rgba(45,16,24,0.95)",
-    otherBubbleText: "#fecdd3",
+    otherBubble: "rgba(255,255,255,0.07)",
+    otherBubbleText: "#fce7f3",
     accent: "#f43f5e",
+    accent2: "#a855f7",
     accentText: "#ffffff",
     accentSoft: "rgba(244,63,94,0.15)",
-    dateBg: "rgba(26,10,14,0.85)",
-    dateText: "#fda4af",
-    time: "rgba(255,255,255,0.5)",
-    sendBtn: "#e11d48",
+    dateBg: "rgba(15,6,10,0.75)",
+    dateText: "#7a5560",
+    time: "rgba(255,255,255,0.38)",
+    sendBtn: "linear-gradient(135deg, #e11d48 0%, #9333ea 100%)",
+    sendBtnSolid: "#e11d48",
+    tickSeen: "#fb7185",
   },
-  teal: {
-    name: "Teal Mint",
-    preview: ["#021a18", "#042f2b", "#14b8a6"],
-    bg: "#021a18",
-    surface: "#042f2b",
-    surfaceHover: "#073d37",
-    border: "#0f4f48",
-    headerBg: "rgba(4,47,43,0.97)",
-    inputBg: "#011210",
-    myBubble: "rgba(13,148,136,0.88)",
-    myBubbleText: "#ffffff",
-    otherBubble: "rgba(4,47,43,0.95)",
-    otherBubbleText: "#99f6e4",
-    accent: "#14b8a6",
-    accentText: "#ffffff",
-    accentSoft: "rgba(20,184,166,0.15)",
-    dateBg: "rgba(2,26,24,0.85)",
-    dateText: "#5eead4",
-    time: "rgba(255,255,255,0.5)",
-    sendBtn: "#0d9488",
-  },
-  slate: {
-    name: "Slate Pro",
-    preview: ["#0f111a", "#161b2e", "#6366f1"],
-    bg: "#0f111a",
-    surface: "#161b2e",
-    surfaceHover: "#1e2540",
-    border: "#252d45",
-    headerBg: "rgba(22,27,46,0.97)",
-    inputBg: "#0a0c14",
-    myBubble: "rgba(79,70,229,0.88)",
-    myBubbleText: "#ffffff",
-    otherBubble: "rgba(22,27,46,0.95)",
-    otherBubbleText: "#c7d2fe",
-    accent: "#6366f1",
-    accentText: "#ffffff",
-    accentSoft: "rgba(99,102,241,0.15)",
-    dateBg: "rgba(15,17,26,0.85)",
-    dateText: "#a5b4fc",
-    time: "rgba(255,255,255,0.5)",
-    sendBtn: "#4f46e5",
-  },
-  amber: {
-    name: "Amber Night",
-    preview: ["#180e00", "#2a1800", "#f59e0b"],
-    bg: "#180e00",
-    surface: "#2a1800",
-    surfaceHover: "#381f00",
-    border: "#4a2b00",
-    headerBg: "rgba(42,24,0,0.97)",
-    inputBg: "#100900",
-    myBubble: "rgba(217,119,6,0.88)",
-    myBubbleText: "#ffffff",
-    otherBubble: "rgba(42,24,0,0.95)",
+  gold: {
+    name: "Luxe Gold",
+    preview: ["#0c0800", "#1a1200", "#f59e0b"],
+    bg: "#0c0800",
+    gradientA: "#150f00",
+    gradientB: "#1a1200",
+    orb1: "rgba(245,158,11,0.14)",
+    orb2: "rgba(252,211,77,0.08)",
+    orb3: "rgba(251,146,60,0.08)",
+    surface: "rgba(255,255,255,0.045)",
+    surfaceHover: "rgba(255,255,255,0.075)",
+    surfaceSolid: "#1a1200",
+    border: "rgba(255,220,80,0.12)",
+    borderGlow: "rgba(245,158,11,0.45)",
+    headerBg: "rgba(12,8,0,0.88)",
+    inputBg: "rgba(255,255,255,0.05)",
+    myBubble: "linear-gradient(135deg, rgba(180,120,0,0.90) 0%, rgba(217,119,6,0.85) 100%)",
+    myBubbleSolid: "#b45309",
+    myBubbleText: "#fff9e6",
+    otherBubble: "rgba(255,255,255,0.065)",
     otherBubbleText: "#fde68a",
     accent: "#f59e0b",
+    accent2: "#fb923c",
     accentText: "#000000",
     accentSoft: "rgba(245,158,11,0.15)",
-    dateBg: "rgba(24,14,0,0.85)",
-    dateText: "#fcd34d",
-    time: "rgba(255,255,255,0.5)",
-    sendBtn: "#d97706",
+    dateBg: "rgba(12,8,0,0.80)",
+    dateText: "#78663a",
+    time: "rgba(255,220,80,0.35)",
+    sendBtn: "linear-gradient(135deg, #b45309 0%, #d97706 100%)",
+    sendBtnSolid: "#b45309",
+    tickSeen: "#fbbf24",
   },
-  light: {
-    name: "Light ☀️",
-    preview: ["#f0f4f8", "#ffffff", "#0ea5e9"],
-    bg: "#e8edf2",
-    surface: "#ffffff",
-    surfaceHover: "#f1f5f9",
-    border: "#e2e8f0",
-    headerBg: "rgba(255,255,255,0.97)",
-    inputBg: "#f1f5f9",
-    myBubble: "rgba(14,165,233,0.90)",
+  ice: {
+    name: "Ice",
+    preview: ["#f0f6ff", "#e2ecfa", "#3b82f6"],
+    bg: "#f0f6ff",
+    gradientA: "#e8f0fb",
+    gradientB: "#ddeaf8",
+    orb1: "rgba(59,130,246,0.12)",
+    orb2: "rgba(99,102,241,0.08)",
+    orb3: "rgba(14,165,233,0.10)",
+    surface: "rgba(255,255,255,0.75)",
+    surfaceHover: "rgba(255,255,255,0.90)",
+    surfaceSolid: "#ffffff",
+    border: "rgba(59,130,246,0.15)",
+    borderGlow: "rgba(59,130,246,0.35)",
+    headerBg: "rgba(240,246,255,0.90)",
+    inputBg: "rgba(255,255,255,0.80)",
+    myBubble: "linear-gradient(135deg, rgba(37,99,235,0.90) 0%, rgba(79,70,229,0.85) 100%)",
+    myBubbleSolid: "#2563eb",
     myBubbleText: "#ffffff",
-    otherBubble: "rgba(255,255,255,0.98)",
+    otherBubble: "rgba(255,255,255,0.85)",
     otherBubbleText: "#1e293b",
-    accent: "#0ea5e9",
+    accent: "#3b82f6",
+    accent2: "#8b5cf6",
     accentText: "#ffffff",
-    accentSoft: "rgba(14,165,233,0.12)",
-    dateBg: "rgba(226,232,240,0.90)",
+    accentSoft: "rgba(59,130,246,0.12)",
+    dateBg: "rgba(240,246,255,0.85)",
     dateText: "#64748b",
-    time: "rgba(0,0,0,0.4)",
-    sendBtn: "#0284c7",
+    time: "rgba(30,41,59,0.35)",
+    sendBtn: "linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)",
+    sendBtnSolid: "#2563eb",
+    tickSeen: "#3b82f6",
+  },
+  obsidian: {
+    name: "Obsidian",
+    preview: ["#080808", "#111111", "#6366f1"],
+    bg: "#080808",
+    gradientA: "#0d0d0d",
+    gradientB: "#111111",
+    orb1: "rgba(99,102,241,0.12)",
+    orb2: "rgba(168,85,247,0.08)",
+    orb3: "rgba(236,72,153,0.06)",
+    surface: "rgba(255,255,255,0.04)",
+    surfaceHover: "rgba(255,255,255,0.07)",
+    surfaceSolid: "#141414",
+    border: "rgba(255,255,255,0.07)",
+    borderGlow: "rgba(99,102,241,0.35)",
+    headerBg: "rgba(8,8,8,0.92)",
+    inputBg: "rgba(255,255,255,0.04)",
+    myBubble: "linear-gradient(135deg, rgba(67,56,202,0.90) 0%, rgba(124,58,237,0.85) 100%)",
+    myBubbleSolid: "#4338ca",
+    myBubbleText: "#ffffff",
+    otherBubble: "rgba(255,255,255,0.055)",
+    otherBubbleText: "#c7d2fe",
+    accent: "#6366f1",
+    accent2: "#a855f7",
+    accentText: "#ffffff",
+    accentSoft: "rgba(99,102,241,0.14)",
+    dateBg: "rgba(8,8,8,0.80)",
+    dateText: "#4a5280",
+    time: "rgba(255,255,255,0.32)",
+    sendBtn: "linear-gradient(135deg, #4338ca 0%, #7c3aed 100%)",
+    sendBtnSolid: "#4338ca",
+    tickSeen: "#818cf8",
   },
 } as const;
 
 type ThemeKey = keyof typeof THEMES;
 
 const WALLPAPERS = [
-  { id: "none",      label: "Koi nahi",  value: "" },
+  { id: "none",      label: "None",      value: "" },
   { id: "forest",    label: "Forest",    value: "https://images.unsplash.com/photo-1448375240586-882707db888b?w=1200&q=80" },
   { id: "ocean",     label: "Ocean",     value: "https://images.unsplash.com/photo-1505118380757-91f5f5632de0?w=1200&q=80" },
   { id: "mountains", label: "Pahad",     value: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1200&q=80" },
@@ -214,17 +237,18 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
   const [showWallpaperPanel, setShowWallpaperPanel] = useState(false);
   const [showThemePanel, setShowThemePanel] = useState(false);
   const [lastSeenTimer, setLastSeenTimer] = useState(0);
+  const [infoModal, setInfoModal]         = useState<any | null>(null); // ← seen-time info
 
   const [themeKey, setThemeKey] = useState<ThemeKey>(() => {
-    if (typeof window === "undefined") return "dark";
-    return (localStorage.getItem("chat_theme") as ThemeKey) || "dark";
+    if (typeof window === "undefined") return "aurora";
+    return (localStorage.getItem("chat_theme") as ThemeKey) || "aurora";
   });
   const [wallpaper, setWallpaper] = useState<string>(() =>
     typeof window !== "undefined" ? (localStorage.getItem("chat_wallpaper") || "") : ""
   );
   const [customUrl, setCustomUrl] = useState("");
 
-  const t = THEMES[themeKey]; // current theme shortcut
+  const t = THEMES[themeKey];
 
   const bottomRef        = useRef<HTMLDivElement>(null);
   const firstUnreadRef   = useRef<HTMLDivElement>(null);
@@ -298,11 +322,14 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     return () => { supabase.removeChannel(channel); };
   }, [supabase, userId]);
 
-  // ─── 2. Blue Tick ─────────────────────────────────────────────────────────
+  // ─── 2. Blue Tick + Seen Timestamp ────────────────────────────────────────
   useEffect(() => {
     if (!isAtBottom) return;
     const ids = allMessages.filter((m) => m.user_id !== userId && !m.is_seen).map((m) => m.id);
-    if (ids.length > 0) supabase.from("messages").update({ is_seen: true }).in("id", ids);
+    if (ids.length > 0) {
+      const seenAt = new Date().toISOString();
+      supabase.from("messages").update({ is_seen: true, seen_at: seenAt }).in("id", ids);
+    }
   }, [allMessages, userId, supabase, isAtBottom]);
 
   // ─── 3. Online / Last Seen ────────────────────────────────────────────────
@@ -393,7 +420,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     if (typingTimeout.current) clearTimeout(typingTimeout.current);
     isTypingRef.current = false; sendTypingSignal(false);
 
-    const msgData: any = { user_id: userId, username, text, is_seen: false, deleted_for: [] };
+    const msgData: any = { user_id: userId, username, text, is_seen: false, seen_at: null, deleted_for: [] };
     if (replyTo) {
       msgData.reply_to_id   = replyTo.id;
       msgData.reply_to_text = replyTo.text || replyTo.file_name || "📎 File";
@@ -444,7 +471,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
         user_id: userId, username, text: selectedFile.name,
         file_url: urlData?.signedUrl, file_type: fileType,
         file_name: selectedFile.name, file_size: selectedFile.size,
-        is_seen: false, deleted_for: [],
+        is_seen: false, seen_at: null, deleted_for: [],
       };
       if (replyTo) {
         msgData.reply_to_id   = replyTo.id;
@@ -525,6 +552,15 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     return `${d.toLocaleDateString("en-IN", { day: "numeric", month: "short" })} ${d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })} ko`;
   };
 
+  const formatExactDateTime = (ts: string) => {
+    if (!ts) return null;
+    const d = new Date(ts);
+    return d.toLocaleString("en-IN", {
+      day: "numeric", month: "short", year: "numeric",
+      hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true
+    });
+  };
+
   const formatSize = (b: number) => {
     if (!b) return "";
     if (b < 1024) return b + " B";
@@ -599,8 +635,8 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     );
     if (!otherUser) return null;
     if (otherUser.is_online) return (
-      <span className="flex items-center gap-1.5 text-[11px]" style={{ color: t.accent }}>
-        <span className="w-2 h-2 rounded-full animate-pulse inline-block" style={{ backgroundColor: t.accent }} />
+      <span className="flex items-center gap-1.5 text-[11px]" style={{ color: t.accent2 }}>
+        <span className="w-2 h-2 rounded-full animate-pulse inline-block" style={{ backgroundColor: t.accent2 }} />
         Online
       </span>
     );
@@ -612,68 +648,101 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     );
   };
 
+  const isLightTheme = themeKey === "ice";
+
   if (loading) return (
     <div className="flex h-screen items-center justify-center" style={{ background: t.bg }}>
-      <Loader2 className="animate-spin" style={{ color: t.accent }} />
+      <div className="flex flex-col items-center gap-3">
+        <Loader2 className="animate-spin size-8" style={{ color: t.accent }} />
+        <span className="text-sm" style={{ color: t.dateText }}>Loading...</span>
+      </div>
     </div>
   );
 
   return (
-    <div className="flex h-[100dvh] flex-col relative" style={{
-      background: wallpaper ? `url('${wallpaper}') center/cover no-repeat fixed` : t.bg,
-      color: t.otherBubbleText,
-    }}>
-      {wallpaper && <div className="absolute inset-0 bg-black/40 pointer-events-none z-0" />}
+    <div className="flex h-[100dvh] flex-col relative overflow-hidden" style={{ background: t.bg, color: t.otherBubbleText }}>
+      
+      {/* ── Ambient background orbs ── */}
+      {!wallpaper && (
+        <>
+          <div className="pointer-events-none absolute inset-0 overflow-hidden z-0">
+            <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full blur-[120px] opacity-70"
+              style={{ background: t.orb1 }} />
+            <div className="absolute top-1/2 -right-40 w-[400px] h-[400px] rounded-full blur-[100px] opacity-60"
+              style={{ background: t.orb2 }} />
+            <div className="absolute -bottom-20 left-1/3 w-[350px] h-[350px] rounded-full blur-[90px] opacity-50"
+              style={{ background: t.orb3 }} />
+          </div>
+          {/* Subtle grid overlay */}
+          <div className="pointer-events-none absolute inset-0 z-0 opacity-[0.025]"
+            style={{
+              backgroundImage: `linear-gradient(${isLightTheme ? "#000" : "#fff"} 1px, transparent 1px), linear-gradient(90deg, ${isLightTheme ? "#000" : "#fff"} 1px, transparent 1px)`,
+              backgroundSize: "40px 40px"
+            }} />
+        </>
+      )}
+
+      {wallpaper && <div className="absolute inset-0 z-0" style={{ backgroundImage: `url('${wallpaper}')`, backgroundSize: "cover", backgroundPosition: "center" }}>
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" />
+      </div>}
 
       {/* ── Header ── */}
-      <header className="relative z-10 px-4 py-3 flex justify-between items-center shrink-0 backdrop-blur"
-        style={{ background: t.headerBg, borderBottom: `1px solid ${t.border}` }}>
-        <div className="flex flex-col gap-0.5">
-          <h1 className="font-bold text-lg tracking-tight leading-tight" style={{ color: t.accent }}>
-            Private Portal
-          </h1>
-          <div className="min-h-[16px] flex items-center">{headerSubtitle()}</div>
+      <header className="relative z-20 px-4 py-3 flex justify-between items-center shrink-0"
+        style={{
+          background: t.headerBg,
+          borderBottom: `1px solid ${t.border}`,
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+        }}>
+        <div className="flex items-center gap-3">
+          {/* Logo mark */}
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: t.accentSoft, border: `1px solid ${t.borderGlow}` }}>
+            <span className="text-base">🔒</span>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <h1 className="font-bold text-[15px] tracking-tight leading-tight" style={{
+              background: `linear-gradient(90deg, ${t.accent}, ${t.accent2})`,
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+            }}>
+              Private Portal
+            </h1>
+            <div className="min-h-[14px] flex items-center">{headerSubtitle()}</div>
+          </div>
         </div>
-        <div className="flex items-center gap-1">
-          {/* Theme button */}
-          <button onClick={() => setShowThemePanel(true)} title="Theme badlo"
-            className="p-2 rounded-full transition-colors"
-            style={{ color: t.dateText }}
-            onMouseOver={(e) => (e.currentTarget.style.background = t.surfaceHover)}
-            onMouseOut={(e) => (e.currentTarget.style.background = "transparent")}>
-            <Palette className="size-5" />
-          </button>
-          <button onClick={() => setShowClearConfirm(true)} title="Chat saaf"
-            className="p-2 rounded-full transition-colors"
-            style={{ color: t.dateText }}
-            onMouseOver={(e) => (e.currentTarget.style.background = t.surfaceHover)}
-            onMouseOut={(e) => (e.currentTarget.style.background = "transparent")}>
-            <Eraser className="size-5" />
-          </button>
-          <button onClick={() => setShowWallpaperPanel(true)} title="Wallpaper"
-            className="p-2 rounded-full transition-colors"
-            style={{ color: t.dateText }}
-            onMouseOver={(e) => (e.currentTarget.style.background = t.surfaceHover)}
-            onMouseOut={(e) => (e.currentTarget.style.background = "transparent")}>
-            <ImageIcon className="size-5" />
-          </button>
-          <button onClick={() => supabase.auth.signOut().then(() => window.location.reload())}
-            className="p-2 rounded-full transition-colors"
-            style={{ color: t.dateText }}
-            onMouseOver={(e) => (e.currentTarget.style.background = t.surfaceHover)}
-            onMouseOut={(e) => (e.currentTarget.style.background = "transparent")}>
-            <LogOut className="size-5" />
-          </button>
+        <div className="flex items-center gap-0.5">
+          {[
+            { icon: <Palette className="size-[18px]" />, label: "Theme", action: () => setShowThemePanel(true) },
+            { icon: <Eraser className="size-[18px]" />, label: "Clear", action: () => setShowClearConfirm(true) },
+            { icon: <ImageIcon className="size-[18px]" />, label: "Wallpaper", action: () => setShowWallpaperPanel(true) },
+            { icon: <LogOut className="size-[18px]" />, label: "Logout", action: () => supabase.auth.signOut().then(() => window.location.reload()) },
+          ].map(({ icon, label, action }) => (
+            <button key={label} onClick={action} title={label}
+              className="p-2 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
+              style={{ color: t.dateText }}
+              onMouseOver={(e) => { (e.currentTarget as HTMLButtonElement).style.background = t.surfaceHover; (e.currentTarget as HTMLButtonElement).style.color = t.accent; }}
+              onMouseOut={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = t.dateText; }}>
+              {icon}
+            </button>
+          ))}
         </div>
       </header>
 
       {/* ── Messages ── */}
-      <main ref={mainRef} onScroll={handleScroll} className="relative z-10 flex-1 overflow-y-auto p-4 pb-36">
+      <main ref={mainRef} onScroll={handleScroll} className="relative z-10 flex-1 overflow-y-auto px-4 pt-4 pb-36"
+        style={{ scrollbarWidth: "thin", scrollbarColor: `${t.border} transparent` }}>
         {timeline.map((item: any) => {
           if (item.kind === "date") return (
-            <div key={item.key} className="flex justify-center my-4">
-              <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest backdrop-blur"
-                style={{ background: t.dateBg, color: t.dateText }}>
+            <div key={item.key} className="flex justify-center my-5">
+              <span className="px-4 py-1.5 rounded-full text-[10px] font-semibold uppercase tracking-widest"
+                style={{
+                  background: t.dateBg,
+                  color: t.dateText,
+                  border: `1px solid ${t.border}`,
+                  backdropFilter: "blur(8px)",
+                }}>
                 {item.label}
               </span>
             </div>
@@ -686,81 +755,99 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
           return (
             <div key={m.id}>
               {item.isFirstUnread && (
-                <div ref={firstUnreadRef} className="flex items-center gap-2 my-4">
-                  <div className="flex-1 h-px" style={{ background: t.accent + "55" }} />
-                  <span className="text-[11px] font-bold px-3 py-1 rounded-full whitespace-nowrap border"
-                    style={{ color: t.accent, background: t.accentSoft, borderColor: t.accent + "44" }}>
+                <div ref={firstUnreadRef} className="flex items-center gap-2 my-5">
+                  <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, transparent, ${t.accent}55)` }} />
+                  <span className="text-[10px] font-bold px-3 py-1.5 rounded-full whitespace-nowrap"
+                    style={{ color: t.accent, background: t.accentSoft, border: `1px solid ${t.accent}33` }}>
                     ↓ {unreadCount} naye message
                   </span>
-                  <div className="flex-1 h-px" style={{ background: t.accent + "55" }} />
+                  <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${t.accent}55, transparent)` }} />
                 </div>
               )}
 
               <div className={`flex ${mine ? "justify-end" : "justify-start"} mb-2 group`}>
+                {/* Reply button for others */}
                 {!mine && (
                   <button onClick={() => { setReplyTo(m); textareaRef.current?.focus(); }}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity mr-1 self-end mb-1 p-1.5 rounded-full"
-                    style={{ background: t.surface, color: t.dateText }}>
+                    className="opacity-0 group-hover:opacity-100 transition-all duration-200 mr-1.5 self-end mb-1 p-1.5 rounded-xl hover:scale-105"
+                    style={{ background: t.surface, color: t.accent, border: `1px solid ${t.border}` }}>
                     <CornerUpLeft className="size-3.5" />
                   </button>
                 )}
 
-                <div
-                  id={`bubble-${m.id}`}
-                  onContextMenu={(e) => { e.preventDefault(); setDeleteModal({ id: m.id, mine }); }}
-                  onDoubleClick={() => { setReplyTo(m); textareaRef.current?.focus(); }}
-                  onTouchStart={() => handleTouchStart(m.id, mine)}
-                  onTouchEnd={handleTouchEnd}
-                  onTouchMove={handleTouchEnd}
-                  className="max-w-[85%] rounded-2xl px-3 py-2 shadow-md cursor-pointer select-none backdrop-blur-sm transition-all duration-300"
-                  style={{
-                    background: mine ? t.myBubble : t.otherBubble,
-                    color: mine ? t.myBubbleText : t.otherBubbleText,
-                    borderRadius: mine ? "18px 4px 18px 18px" : "4px 18px 18px 18px",
-                    transform: isHighlighted ? "scale(1.02)" : "scale(1)",
-                    boxShadow: isHighlighted ? `0 0 0 2px ${t.accent}` : "0 1px 4px rgba(0,0,0,0.3)",
-                  }}
-                >
-                  {!mine && (
-                    <p className="text-[10px] font-black mb-0.5 uppercase" style={{ color: t.accent }}>
-                      {m.username}
-                    </p>
-                  )}
-
-                  {m.reply_to_id && (
-                    <div
-                      onClick={(e) => { e.stopPropagation(); jumpToMessage(m.reply_to_id); }}
-                      onTouchEnd={(e) => { e.stopPropagation(); jumpToMessage(m.reply_to_id); }}
-                      className="mb-1.5 px-2 py-1.5 rounded-lg cursor-pointer transition-opacity active:opacity-60"
-                      style={{
-                        background: "rgba(0,0,0,0.2)",
-                        borderLeft: `3px solid ${t.accent}`,
-                      }}>
-                      <p className="text-[10px] font-bold mb-0.5" style={{ color: t.accent }}>
-                        ↩ {m.reply_to_user === username ? "Aap" : m.reply_to_user}
+                <div className="flex flex-col gap-1 max-w-[82%]">
+                  <div
+                    id={`bubble-${m.id}`}
+                    onContextMenu={(e) => { e.preventDefault(); setDeleteModal({ id: m.id, mine }); }}
+                    onDoubleClick={() => { setReplyTo(m); textareaRef.current?.focus(); }}
+                    onTouchStart={() => handleTouchStart(m.id, mine)}
+                    onTouchEnd={handleTouchEnd}
+                    onTouchMove={handleTouchEnd}
+                    className="rounded-2xl px-3.5 py-2.5 cursor-pointer select-none transition-all duration-300"
+                    style={{
+                      background: mine ? t.myBubble : t.otherBubble,
+                      color: mine ? t.myBubbleText : t.otherBubbleText,
+                      borderRadius: mine ? "18px 4px 18px 18px" : "4px 18px 18px 18px",
+                      border: `1px solid ${mine ? "rgba(255,255,255,0.12)" : t.border}`,
+                      backdropFilter: "blur(16px)",
+                      WebkitBackdropFilter: "blur(16px)",
+                      transform: isHighlighted ? "scale(1.02)" : "scale(1)",
+                      boxShadow: isHighlighted
+                        ? `0 0 0 2px ${t.accent}, 0 8px 32px rgba(0,0,0,0.3)`
+                        : "0 2px 12px rgba(0,0,0,0.2)",
+                    }}
+                  >
+                    {!mine && (
+                      <p className="text-[10px] font-black mb-1 uppercase tracking-wide" style={{ color: t.accent }}>
+                        {m.username}
                       </p>
-                      <p className="text-[11px] opacity-75 truncate max-w-[200px]">{m.reply_to_text}</p>
-                    </div>
-                  )}
-
-                  {renderContent(m)}
-
-                  <div className="flex items-center justify-end gap-1 mt-1">
-                    <span className="text-[9px] font-medium" style={{ color: t.time }}>
-                      {new Date(m.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}
-                    </span>
-                    {/* ✅ FIX: `t.themeKey` → `themeKey` (t is a theme object, not the key) */}
-                    {mine && (m.is_seen
-                      ? <CheckCheck className="size-3" style={{ color: themeKey === "light" ? "#0284c7" : "#60a5fa" }} />
-                      : <Check className="size-3" style={{ color: t.time }} />
                     )}
+
+                    {m.reply_to_id && (
+                      <div
+                        onClick={(e) => { e.stopPropagation(); jumpToMessage(m.reply_to_id); }}
+                        className="mb-2 px-2.5 py-1.5 rounded-lg cursor-pointer transition-opacity active:opacity-60"
+                        style={{ background: "rgba(0,0,0,0.22)", borderLeft: `3px solid ${t.accent}` }}>
+                        <p className="text-[10px] font-bold mb-0.5" style={{ color: t.accent }}>
+                          ↩ {m.reply_to_user === username ? "Aap" : m.reply_to_user}
+                        </p>
+                        <p className="text-[11px] opacity-70 truncate max-w-[200px]">{m.reply_to_text}</p>
+                      </div>
+                    )}
+
+                    {renderContent(m)}
+
+                    {/* Timestamp row */}
+                    <div className="flex items-center justify-end gap-1.5 mt-1.5">
+                      <span className="text-[9px] font-medium" style={{ color: t.time }}>
+                        {new Date(m.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}
+                      </span>
+                      {mine && (
+                        <>
+                          {m.is_seen
+                            ? <CheckCheck className="size-3.5" style={{ color: t.tickSeen }} />
+                            : <Check className="size-3" style={{ color: t.time }} />
+                          }
+                          {/* ── Info button for seen time ── */}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setInfoModal(m); }}
+                            onTouchEnd={(e) => { e.stopPropagation(); setInfoModal(m); }}
+                            className="opacity-0 group-hover:opacity-70 hover:opacity-100 transition-opacity"
+                            title="Message info"
+                            style={{ color: t.time }}>
+                            <Info className="size-3" />
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
 
+                {/* Reply button for mine */}
                 {mine && (
                   <button onClick={() => { setReplyTo(m); textareaRef.current?.focus(); }}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 self-end mb-1 p-1.5 rounded-full"
-                    style={{ background: t.surface, color: t.dateText }}>
+                    className="opacity-0 group-hover:opacity-100 transition-all duration-200 ml-1.5 self-end mb-1 p-1.5 rounded-xl hover:scale-105"
+                    style={{ background: t.surface, color: t.accent, border: `1px solid ${t.border}` }}>
                     <CornerUpLeft className="size-3.5" />
                   </button>
                 )}
@@ -771,30 +858,31 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
         <div ref={bottomRef} />
       </main>
 
-      {/* Unread badge */}
+      {/* ── Unread badge ── */}
       {unreadCount > 0 && !isAtBottom && (
         <button onClick={scrollToBottom}
-          className="fixed bottom-28 right-4 z-40 rounded-full pl-3 pr-4 py-2.5 text-sm font-bold shadow-xl flex items-center gap-2"
-          style={{ background: t.accent, color: t.accentText }}>
-          <span className="text-base">↓</span>
+          className="fixed bottom-28 right-4 z-40 rounded-full pl-3 pr-4 py-2.5 text-sm font-bold shadow-2xl flex items-center gap-2 transition-all hover:scale-105"
+          style={{
+            background: t.sendBtn,
+            color: "#fff",
+            boxShadow: `0 4px 24px ${t.myBubbleSolid}55`,
+          }}>
+          <span>↓</span>
           <span>{unreadCount} naya</span>
         </button>
       )}
 
-      {/* File Preview */}
+      {/* ── File Preview Bar ── */}
       {selectedFile && (
-        <div className="fixed bottom-[72px] left-0 right-0 p-3 z-40 backdrop-blur"
-          style={{ background: t.headerBg, borderTop: `1px solid ${t.border}` }}>
+        <div className="fixed bottom-[72px] left-0 right-0 p-3 z-40"
+          style={{ background: t.headerBg, borderTop: `1px solid ${t.border}`, backdropFilter: "blur(20px)" }}>
           <div className="mx-auto max-w-4xl flex items-center gap-3">
             {filePreview && selectedFile.type.startsWith("image/") && (
-              <img src={filePreview} className="size-14 object-cover rounded-lg shrink-0" />
-            )}
-            {filePreview && selectedFile.type.startsWith("video/") && (
-              <video src={filePreview} className="size-14 object-cover rounded-lg shrink-0" />
+              <img src={filePreview} className="size-14 object-cover rounded-xl shrink-0" />
             )}
             {!filePreview && (
-              <div className="size-14 rounded-lg flex items-center justify-center shrink-0"
-                style={{ background: t.surface }}>
+              <div className="size-14 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: t.surface, border: `1px solid ${t.border}` }}>
                 <FileText className="size-6" style={{ color: t.dateText }} />
               </div>
             )}
@@ -802,11 +890,11 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
               <p className="text-sm font-medium truncate">{selectedFile.name}</p>
               <p className="text-xs opacity-50">{formatSize(selectedFile.size)}</p>
             </div>
-            <button onClick={cancelFile} className="p-1.5 rounded-full" style={{ color: t.dateText }}>
+            <button onClick={cancelFile} className="p-1.5 rounded-lg" style={{ color: t.dateText }}>
               <X className="size-4" />
             </button>
             <button onClick={sendFile} disabled={uploading}
-              className="px-4 py-2 rounded-full text-sm font-medium disabled:opacity-50 flex items-center gap-2"
+              className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2 transition-all hover:scale-105"
               style={{ background: t.sendBtn, color: "#fff" }}>
               {uploading ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
               {uploading ? "Bhej raha..." : "Bhejo"}
@@ -815,20 +903,20 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
         </div>
       )}
 
-      {/* Footer */}
-      <footer className="fixed bottom-0 w-full z-50 backdrop-blur"
-        style={{ background: t.headerBg, borderTop: `1px solid ${t.border}` }}>
+      {/* ── Footer ── */}
+      <footer className="fixed bottom-0 w-full z-50"
+        style={{ background: t.headerBg, borderTop: `1px solid ${t.border}`, backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" }}>
         {replyTo && (
-          <div className="flex items-center gap-2 px-4 pt-2 pb-1"
+          <div className="flex items-center gap-2 px-4 pt-2.5 pb-1.5 mx-auto max-w-4xl"
             style={{ borderBottom: `1px solid ${t.border}` }}>
-            <Reply className="size-4 shrink-0" style={{ color: t.accent }} />
+            <div className="p-1 rounded-lg" style={{ background: t.accentSoft }}>
+              <Reply className="size-3.5" style={{ color: t.accent }} />
+            </div>
             <div className="flex-1 min-w-0">
               <p className="text-[10px] font-bold" style={{ color: t.accent }}>
                 {replyTo.user_id === userId ? "Apne message ko" : replyTo.username + " ko"} reply
               </p>
-              <p className="text-[11px] opacity-60 truncate">
-                {replyTo.text || replyTo.file_name || "📎 File"}
-              </p>
+              <p className="text-[11px] opacity-60 truncate">{replyTo.text || replyTo.file_name || "📎 File"}</p>
             </div>
             <button onClick={() => setReplyTo(null)} style={{ color: t.dateText }}>
               <X className="size-4" />
@@ -840,75 +928,132 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
             accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
             onChange={handleFileSelect} className="hidden" />
           <button onClick={() => fileInputRef.current?.click()}
-            className="p-2.5 rounded-full shrink-0 mb-0.5 transition-colors"
-            style={{ background: t.surface, color: t.dateText }}>
+            className="p-2.5 rounded-xl shrink-0 mb-0.5 transition-all hover:scale-105 active:scale-95"
+            style={{ background: t.surface, color: t.dateText, border: `1px solid ${t.border}` }}>
             <Paperclip className="size-5" />
           </button>
           <textarea
             ref={textareaRef}
             value={draft}
             onChange={(e) => handleTyping(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); selectedFile ? sendFile() : sendMessage(); } }}
             placeholder="Type a message..."
             rows={1}
-            className="flex-1 rounded-2xl px-4 py-2.5 outline-none text-sm resize-none overflow-hidden min-h-[42px] max-h-[120px] leading-relaxed"
+            className="flex-1 rounded-2xl px-4 py-2.5 outline-none text-sm resize-none overflow-hidden min-h-[42px] max-h-[120px] leading-relaxed placeholder-opacity-40"
             style={{
               background: t.inputBg,
               color: t.otherBubbleText,
               border: `1px solid ${t.border}`,
               height: "42px",
+              backdropFilter: "blur(8px)",
             }}
           />
-          <button onClick={selectedFile ? sendFile : sendMessage} disabled={uploading}
-            className="p-2.5 rounded-full shadow-lg transition-all active:scale-95 disabled:opacity-50 shrink-0 mb-0.5"
-            style={{ background: t.sendBtn, color: "#fff" }}>
+          <button onClick={selectedFile ? sendFile : sendMessage} disabled={uploading || (!draft.trim() && !selectedFile)}
+            className="p-2.5 rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 disabled:opacity-40 shrink-0 mb-0.5"
+            style={{ background: t.sendBtn, color: "#fff", boxShadow: `0 4px 16px ${t.myBubbleSolid}40` }}>
             {uploading ? <Loader2 className="size-5 animate-spin" /> : <Send className="size-5" />}
           </button>
         </div>
       </footer>
 
+      {/* ══════════════════ MODALS ══════════════════ */}
+
+      {/* ── Message Info / Seen Time Modal ── */}
+      {infoModal && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center px-4"
+          onClick={() => setInfoModal(null)}
+          style={{ backdropFilter: "blur(6px)" }}>
+          <div className="rounded-2xl w-full max-w-xs p-6 shadow-2xl"
+            style={{ background: t.surfaceSolid, border: `1px solid ${t.border}` }}
+            onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ background: t.accentSoft }}>
+                <Info className="size-5" style={{ color: t.accent }} />
+              </div>
+              <h2 className="font-bold text-base" style={{ color: t.otherBubbleText }}>Message Info</h2>
+            </div>
+
+            {/* Sent time */}
+            <div className="flex items-start gap-3 mb-3 p-3 rounded-xl" style={{ background: t.surface }}>
+              <Clock className="size-4 shrink-0 mt-0.5" style={{ color: t.dateText }} />
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: t.dateText }}>Bheja gaya</p>
+                <p className="text-[13px] font-medium" style={{ color: t.otherBubbleText }}>
+                  {formatExactDateTime(infoModal.created_at) || "—"}
+                </p>
+              </div>
+            </div>
+
+            {/* Seen time */}
+            <div className="flex items-start gap-3 p-3 rounded-xl" style={{ background: t.surface }}>
+              <CheckCheck className="size-4 shrink-0 mt-0.5" style={{ color: infoModal.is_seen ? t.tickSeen : t.dateText }} />
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: infoModal.is_seen ? t.tickSeen : t.dateText }}>
+                  {infoModal.is_seen ? "Dekha gaya" : "Abhi nahi dekha"}
+                </p>
+                {infoModal.is_seen && infoModal.seen_at ? (
+                  <p className="text-[13px] font-medium" style={{ color: t.otherBubbleText }}>
+                    {formatExactDateTime(infoModal.seen_at)}
+                  </p>
+                ) : (
+                  <p className="text-[12px]" style={{ color: t.dateText }}>
+                    {infoModal.is_seen ? "Seen time record nahi hua" : "Deliver hua, par seen nahi"}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <button onClick={() => setInfoModal(null)}
+              className="w-full mt-4 py-2.5 rounded-xl text-sm font-medium transition-all hover:opacity-90"
+              style={{ background: t.accentSoft, color: t.accent, border: `1px solid ${t.accent}33` }}>
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Theme Panel ── */}
       {showThemePanel && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-end justify-center"
-          onClick={() => setShowThemePanel(false)}>
-          <div className="rounded-t-2xl w-full max-w-lg p-5"
-            style={{ background: t.surface }}
+          onClick={() => setShowThemePanel(false)}
+          style={{ backdropFilter: "blur(6px)" }}>
+          <div className="rounded-t-3xl w-full max-w-lg p-5 pt-4"
+            style={{ background: t.surfaceSolid, border: `1px solid ${t.border}`, borderBottom: "none" }}
             onClick={(e) => e.stopPropagation()}>
+            {/* Handle bar */}
+            <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ background: t.border }} />
             <div className="flex justify-between items-center mb-5">
               <div>
-                <h2 className="font-bold text-lg" style={{ color: t.otherBubbleText }}>Theme Chuno</h2>
-                <p className="text-xs mt-0.5" style={{ color: t.dateText }}>Apni pasand ka theme lagao</p>
+                <h2 className="font-bold text-base" style={{ color: t.otherBubbleText }}>Theme Chuno</h2>
+                <p className="text-[11px] mt-0.5" style={{ color: t.dateText }}>Apni pasand ka theme lagao</p>
               </div>
               <button onClick={() => setShowThemePanel(false)} style={{ color: t.dateText }}>
                 <X className="size-5" />
               </button>
             </div>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {(Object.entries(THEMES) as [ThemeKey, typeof THEMES[ThemeKey]][]).map(([key, th]) => (
                 <button key={key} onClick={() => applyTheme(key)}
-                  className="flex flex-col items-center gap-2 p-2 rounded-2xl transition-all"
+                  className="flex flex-col items-center gap-2 p-2.5 rounded-2xl transition-all duration-200 hover:scale-105"
                   style={{
-                    background: themeKey === key ? t.accentSoft : "transparent",
-                    border: `2px solid ${themeKey === key ? t.accent : "transparent"}`,
+                    background: themeKey === key ? t.accentSoft : t.surface,
+                    border: `1.5px solid ${themeKey === key ? t.accent : t.border}`,
                   }}>
-                  {/* Color preview circles */}
-                  <div className="relative w-14 h-14 rounded-xl overflow-hidden shadow-lg"
+                  <div className="relative w-16 h-12 rounded-xl overflow-hidden shadow-lg"
                     style={{ background: th.bg }}>
                     <div className="absolute inset-0 flex flex-col justify-end p-1.5 gap-1">
-                      <div className="self-start h-4 rounded-lg px-2 flex items-center text-[8px] font-medium"
-                        style={{ background: th.otherBubble, color: th.otherBubbleText, maxWidth: "70%" }}>
-                        Hi!
-                      </div>
-                      <div className="self-end h-4 rounded-lg px-2 flex items-center text-[8px] font-medium"
-                        style={{ background: th.myBubble, color: th.myBubbleText, maxWidth: "70%" }}>
-                        Hello
-                      </div>
+                      <div className="self-start h-4 rounded-lg px-1.5 flex items-center text-[7px] font-semibold"
+                        style={{ background: th.otherBubble, color: th.otherBubbleText, maxWidth: "70%" }}>Hi!</div>
+                      <div className="self-end h-4 rounded-lg px-1.5 flex items-center text-[7px] font-semibold"
+                        style={{ background: th.myBubbleSolid, color: th.myBubbleText, maxWidth: "70%" }}>Hey</div>
                     </div>
                     {themeKey === key && (
                       <div className="absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold"
                         style={{ background: th.accent, color: th.accentText }}>✓</div>
                     )}
                   </div>
-                  <span className="text-[10px] font-medium text-center leading-tight"
+                  <span className="text-[10px] font-semibold text-center leading-tight"
                     style={{ color: themeKey === key ? t.accent : t.dateText }}>
                     {th.name}
                   </span>
@@ -922,12 +1067,14 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
       {/* ── Wallpaper Panel ── */}
       {showWallpaperPanel && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-end justify-center"
-          onClick={() => setShowWallpaperPanel(false)}>
-          <div className="rounded-t-2xl w-full max-w-lg p-5"
-            style={{ background: t.surface }}
+          onClick={() => setShowWallpaperPanel(false)}
+          style={{ backdropFilter: "blur(6px)" }}>
+          <div className="rounded-t-3xl w-full max-w-lg p-5 pt-4"
+            style={{ background: t.surfaceSolid, border: `1px solid ${t.border}`, borderBottom: "none" }}
             onClick={(e) => e.stopPropagation()}>
+            <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ background: t.border }} />
             <div className="flex justify-between items-center mb-4">
-              <h2 className="font-bold" style={{ color: t.otherBubbleText }}>Wallpaper Chuno</h2>
+              <h2 className="font-bold text-base" style={{ color: t.otherBubbleText }}>Wallpaper Chuno</h2>
               <button onClick={() => setShowWallpaperPanel(false)} style={{ color: t.dateText }}>
                 <X className="size-5" />
               </button>
@@ -935,13 +1082,13 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
             <div className="grid grid-cols-3 gap-3 mb-4">
               {WALLPAPERS.map((w) => (
                 <button key={w.id} onClick={() => applyWallpaper(w.value)}
-                  className="relative rounded-xl overflow-hidden h-20 border-2 transition-all"
+                  className="relative rounded-xl overflow-hidden h-20 transition-all duration-200 hover:scale-105"
                   style={{
                     background: w.value ? `url('${w.value}') center/cover` : t.bg,
-                    borderColor: wallpaper === w.value ? t.accent : "transparent",
+                    border: `2px solid ${wallpaper === w.value ? t.accent : "transparent"}`,
                     transform: wallpaper === w.value ? "scale(0.95)" : "scale(1)",
                   }}>
-                  <span className="absolute bottom-1 left-0 right-0 text-center text-[10px] text-white font-medium bg-black/50 py-0.5">
+                  <span className="absolute bottom-0 left-0 right-0 text-center text-[9px] text-white font-semibold bg-black/60 py-1">
                     {w.label}
                   </span>
                   {wallpaper === w.value && (
@@ -953,11 +1100,12 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
             </div>
             <div className="flex gap-2">
               <input value={customUrl} onChange={(e) => setCustomUrl(e.target.value)}
-                placeholder="Custom image URL dalein..."
+                placeholder="Custom image URL..."
                 className="flex-1 rounded-xl px-3 py-2 text-sm outline-none"
                 style={{ background: t.inputBg, color: t.otherBubbleText, border: `1px solid ${t.border}` }} />
               <button onClick={() => customUrl.trim() && applyWallpaper(customUrl.trim())}
-                disabled={!customUrl.trim()} className="px-4 rounded-xl text-sm font-medium disabled:opacity-40"
+                disabled={!customUrl.trim()}
+                className="px-4 rounded-xl text-sm font-semibold disabled:opacity-40 transition-all hover:scale-105"
                 style={{ background: t.sendBtn, color: "#fff" }}>
                 Lagao
               </button>
@@ -968,29 +1116,29 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
 
       {/* ── Clear Chat ── */}
       {showClearConfirm && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center px-4"
-          onClick={() => setShowClearConfirm(false)}>
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center px-4"
+          onClick={() => setShowClearConfirm(false)}
+          style={{ backdropFilter: "blur(6px)" }}>
           <div className="rounded-2xl w-full max-w-sm p-6 shadow-2xl"
-            style={{ background: t.surface }}
+            style={{ background: t.surfaceSolid, border: `1px solid ${t.border}` }}
             onClick={(e) => e.stopPropagation()}>
             <div className="flex flex-col items-center gap-3 mb-5">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center"
-                style={{ background: "rgba(239,68,68,0.15)" }}>
-                <Eraser className="size-6 text-red-400" />
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.2)" }}>
+                <Eraser className="size-7 text-red-400" />
               </div>
               <h2 className="font-bold text-lg" style={{ color: t.otherBubbleText }}>Chat Saaf Karo?</h2>
-              <p className="text-sm text-center" style={{ color: t.dateText }}>
-                Sirf aapke liye saaf hogi।
-              </p>
+              <p className="text-[13px] text-center" style={{ color: t.dateText }}>Sirf aapke liye saaf hogi। Dusre ke paas rahegi।</p>
             </div>
             <div className="flex gap-3">
               <button onClick={() => setShowClearConfirm(false)}
-                className="flex-1 py-3 rounded-xl text-sm font-medium"
+                className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-80"
                 style={{ border: `1px solid ${t.border}`, color: t.dateText }}>
                 Cancel
               </button>
               <button onClick={clearChatForMe}
-                className="flex-1 py-3 rounded-xl text-sm font-medium bg-red-600 hover:bg-red-500 text-white">
+                className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
+                style={{ background: "linear-gradient(135deg,#dc2626,#ef4444)", color: "#fff" }}>
                 Saaf Karo
               </button>
             </div>
@@ -1000,28 +1148,31 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
 
       {/* ── Delete Modal ── */}
       {deleteModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-end justify-center pb-10"
-          onClick={() => setDeleteModal(null)}>
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-end justify-center pb-8"
+          onClick={() => setDeleteModal(null)}
+          style={{ backdropFilter: "blur(6px)" }}>
           <div className="rounded-2xl w-full max-w-sm mx-4 overflow-hidden shadow-2xl"
-            style={{ background: t.surface }}
+            style={{ background: t.surfaceSolid, border: `1px solid ${t.border}` }}
             onClick={(e) => e.stopPropagation()}>
-            <p className="text-center text-sm py-3" style={{ color: t.dateText, borderBottom: `1px solid ${t.border}` }}>
+            <p className="text-center text-[11px] font-bold uppercase tracking-widest py-3"
+              style={{ color: t.dateText, borderBottom: `1px solid ${t.border}` }}>
               Message Delete Karo
             </p>
             {deleteModal.mine && (
               <button onClick={() => deleteForEveryone(deleteModal.id)}
-                className="w-full py-4 text-red-400 font-medium hover:bg-red-500/10 flex items-center justify-center gap-2"
-                style={{ borderBottom: `1px solid ${t.border}` }}>
-                <Trash2 className="size-4" /> Sabke liye delete karo
+                className="w-full py-4 font-medium flex items-center justify-center gap-2 transition-colors hover:bg-red-500/10"
+                style={{ color: "#f87171", borderBottom: `1px solid ${t.border}` }}>
+                <Trash2 className="size-4" /> Sabke liye delete
               </button>
             )}
             <button onClick={() => deleteForMe(deleteModal.id)}
-              className="w-full py-4 hover:bg-white/5"
+              className="w-full py-4 transition-colors hover:bg-white/5"
               style={{ color: t.otherBubbleText, borderBottom: `1px solid ${t.border}` }}>
-              Sirf mere liye delete karo
+              Sirf mere liye delete
             </button>
             <button onClick={() => setDeleteModal(null)}
-              className="w-full py-3 text-sm" style={{ color: t.dateText }}>
+              className="w-full py-3 text-sm transition-colors hover:bg-white/5"
+              style={{ color: t.dateText }}>
               Cancel
             </button>
           </div>
@@ -1032,11 +1183,12 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
       {fullscreenImg && (
         <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center"
           onClick={() => setFullscreenImg(null)}>
-          <button className="absolute top-4 right-4 text-white bg-black/50 p-2 rounded-full"
+          <button className="absolute top-4 right-4 p-2.5 rounded-xl transition-all hover:scale-105"
+            style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}
             onClick={() => setFullscreenImg(null)}>
-            <X className="size-6" />
+            <X className="size-5" />
           </button>
-          <img src={fullscreenImg} className="max-w-[95vw] max-h-[90vh] object-contain rounded-xl" />
+          <img src={fullscreenImg} className="max-w-[95vw] max-h-[90vh] object-contain rounded-2xl" />
         </div>
       )}
     </div>
