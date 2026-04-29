@@ -323,14 +323,12 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
   }, [supabase, userId]);
 
   // ─── 2. Blue Tick + Seen Timestamp ────────────────────────────────────────
-  useEffect(() => {
-    if (!isAtBottom) return;
+useEffect(() => {
     const ids = allMessages.filter((m) => m.user_id !== userId && !m.is_seen).map((m) => m.id);
-    if (ids.length > 0) {
-      const seenAt = new Date().toISOString();
-      supabase.from("messages").update({ is_seen: true, seen_at: seenAt }).in("id", ids);
-    }
-  }, [allMessages, userId, supabase, isAtBottom]);
+    if (ids.length === 0) return;
+    const seenAt = new Date().toISOString();
+    supabase.from("messages").update({ is_seen: true, seen_at: seenAt }).in("id", ids);
+  }, [allMessages, userId, supabase]);
 
   // ─── 3. Online / Last Seen ────────────────────────────────────────────────
   useEffect(() => {
