@@ -31,7 +31,7 @@ const THEMES = {
     dateText: "#94a3b8",
     time: "rgba(255,255,255,0.55)",
     sendBtn: "#10b981",
-    name: "Dark",
+    // ✅ FIX: removed duplicate `name` property that was here
   },
   ocean: {
     name: "Ocean Blue",
@@ -749,8 +749,9 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                     <span className="text-[9px] font-medium" style={{ color: t.time }}>
                       {new Date(m.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}
                     </span>
+                    {/* ✅ FIX: `t.themeKey` → `themeKey` (t is a theme object, not the key) */}
                     {mine && (m.is_seen
-                      ? <CheckCheck className="size-3" style={{ color: t.themeKey === "light" ? "#0284c7" : "#60a5fa" }} />
+                      ? <CheckCheck className="size-3" style={{ color: themeKey === "light" ? "#0284c7" : "#60a5fa" }} />
                       : <Check className="size-3" style={{ color: t.time }} />
                     )}
                   </div>
