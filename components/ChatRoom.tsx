@@ -322,12 +322,12 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     return () => { supabase.removeChannel(channel); };
   }, [supabase, userId]);
 
-  // ─── 2. Blue Tick + Seen Timestamp ────────────────────────────────────────
-useEffect(() => {
-    const ids = allMessages.filter((m) => m.user_id !== userId && !m.is_seen).map((m) => m.id);
-    if (ids.length === 0) return;
-    const seenAt = new Date().toISOString();
-    supabase.from("messages").update({ is_seen: true, seen_at: seenAt }).in("id", ids);
+  // ─── 2. Blue Tick (simple - mark all received messages as seen) ──────────
+  useEffect(() => {
+    const unseen = allMessages.filter((m) => m.user_id !== userId && !m.is_seen);
+    if (unseen.length === 0) return;
+    const ids = unseen.map((m) => m.id);
+    supabase.from("messages").update({ is_seen: true }).in("id", ids);
   }, [allMessages, userId, supabase]);
 
   // ─── 3. Online / Last Seen ────────────────────────────────────────────────
@@ -934,7 +934,7 @@ useEffect(() => {
             ref={textareaRef}
             value={draft}
             onChange={(e) => handleTyping(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); selectedFile ? sendFile() : sendMessage(); } }}
+            onKeyDown={(e) => { if (e.key === "Enter" && e.ctrlKey) { e.preventDefault(); selectedFile ? sendFile() : sendMessage(); } }}
             placeholder="Type a message..."
             rows={1}
             className="flex-1 rounded-2xl px-4 py-2.5 outline-none text-sm resize-none overflow-hidden min-h-[42px] max-h-[120px] leading-relaxed placeholder-opacity-40"
