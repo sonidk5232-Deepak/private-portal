@@ -323,14 +323,16 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
   }, [supabase, userId]);
 
   // ─── 2. Blue Tick (simple - mark all received messages as seen) ──────────
-useEffect(() => {
-  const unseen = allMessages.filter((m) => m.user_id !== userId && !m.is_seen);
-  if (unseen.length === 0) return;
-  const ids = unseen.map((m) => m.id);
-  supabase.from("messages").update({ is_seen: true }).in("id", ids).then(({ error }) => {
-    if (error) console.error("Seen update error:", error);
-  });
-}, [allMessages, userId, supabase]);
+  useEffect(() => {
+    const unseen = allMessages.filter((m) => m.user_id !== userId && !m.is_seen);
+    if (unseen.length === 0) return;
+    const ids = unseen.map((m) => m.id);
+    const seenAt = new Date().toISOString();
+    supabase.from("messages")
+      .update({ is_seen: true, seen_at: seenAt })
+      .in("id", ids)
+      .then(({ error }) => { if (error) console.error("Seen error:", error); });
+  }, [allMessages, userId, supabase]);
 
   // ─── 3. Online / Last Seen ────────────────────────────────────────────────
   useEffect(() => {
@@ -769,7 +771,7 @@ useEffect(() => {
                 {/* Reply button for others */}
                 {!mine && (
                   <button onClick={() => { setReplyTo(m); textareaRef.current?.focus(); }}
-                    className="opacity-0 group-hover:opacity-100 transition-all duration-200 mr-1.5 self-end mb-1 p-1.5 rounded-xl hover:scale-105"
+                    className="opacity-40 group-hover:opacity-100 transition-all duration-200 mr-1.5 self-end mb-1 p-1.5 rounded-xl hover:scale-105"
                     style={{ background: t.surface, color: t.accent, border: `1px solid ${t.border}` }}>
                     <CornerUpLeft className="size-3.5" />
                   </button>
@@ -832,7 +834,7 @@ useEffect(() => {
                           <button
                             onClick={(e) => { e.stopPropagation(); setInfoModal(m); }}
                             onTouchEnd={(e) => { e.stopPropagation(); setInfoModal(m); }}
-                            className="opacity-0 group-hover:opacity-70 hover:opacity-100 transition-opacity"
+                            className="opacity-50 hover:opacity-100 transition-opacity"
                             title="Message info"
                             style={{ color: t.time }}>
                             <Info className="size-3" />
@@ -846,7 +848,7 @@ useEffect(() => {
                 {/* Reply button for mine */}
                 {mine && (
                   <button onClick={() => { setReplyTo(m); textareaRef.current?.focus(); }}
-                    className="opacity-0 group-hover:opacity-100 transition-all duration-200 ml-1.5 self-end mb-1 p-1.5 rounded-xl hover:scale-105"
+                    className="opacity-40 group-hover:opacity-100 transition-all duration-200 ml-1.5 self-end mb-1 p-1.5 rounded-xl hover:scale-105"
                     style={{ background: t.surface, color: t.accent, border: `1px solid ${t.border}` }}>
                     <CornerUpLeft className="size-3.5" />
                   </button>
