@@ -869,12 +869,12 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                           }
                           {/* ── Info button for seen time ── */}
                           <button
-                            onClick={(e) => { e.stopPropagation(); setInfoModal(m); }}
-                            onTouchEnd={(e) => { e.stopPropagation(); setInfoModal(m); }}
-                            className="opacity-50 hover:opacity-100 transition-opacity"
+                            onClick={(e) => { e.stopPropagation(); if(!selectMode) setInfoModal(m); }}
+                            onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); if(!selectMode) setInfoModal(m); }}
+                            className="opacity-60 hover:opacity-100 active:opacity-100 transition-opacity p-1 -m-1"
                             title="Message info"
                             style={{ color: t.time }}>
-                            <Info className="size-3" />
+                            <Info className="size-3.5" />
                           </button>
                         </>
                       )}
@@ -1027,11 +1027,11 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
 
       {/* ── Message Info / Seen Time Modal ── */}
       {infoModal && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center px-4"
+        <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center px-6"
           onClick={() => setInfoModal(null)}
-          style={{ backdropFilter: "blur(6px)" }}>
+          style={{ backdropFilter: "blur(8px)" }}>
           <div className="rounded-2xl w-full max-w-xs p-6 shadow-2xl"
-            style={{ background: t.surfaceSolid, border: `1px solid ${t.border}` }}
+            style={{ background: t.surfaceSolid, border: `1px solid ${t.border}`, maxWidth: "320px", margin: "0 auto" }}
             onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-5">
               <div className="w-10 h-10 rounded-xl flex items-center justify-center"
