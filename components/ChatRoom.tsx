@@ -238,6 +238,8 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
   const [showThemePanel, setShowThemePanel] = useState(false);
   const [lastSeenTimer, setLastSeenTimer] = useState(0);
   const [infoModal, setInfoModal]         = useState<any | null>(null); // ← seen-time info
+  const [selectedMsgs, setSelectedMsgs]   = useState<string[]>([]); // ← multi-select
+  const [selectMode, setSelectMode]       = useState(false); // ← selection mode
 
   const [themeKey, setThemeKey] = useState<ThemeKey>(() => {
     if (typeof window === "undefined") return "aurora";
@@ -576,9 +578,41 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
   };
 
   const handleTouchStart = (id: string, mine: boolean) => {
-    longPressTimer.current = setTimeout(() => setDeleteModal({ id, mine }), 600);
+    longPressTimer.current = setTimeout(() => {
+      if (selectMode) return;
+      setSelectMode(true);
+      setSelectedMsgs([id]);
+    }, 2000);
   };
   const handleTouchEnd = () => { if (longPressTimer.current) clearTimeout(longPressTimer.current); };
+
+  const toggleSelectMsg = (id: string) => {
+    if (!selectMode) return;
+    setSelectedMsgs((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  };
+
+  const cancelSelection = () => { setSelectMode(false); setSelectedMsgs([]); };
+
+  const deleteSelected = async (forEveryone: boolean) => {
+    for (const id of selectedMsgs) {
+      const msg = allMessages.find((m) => m.id === id);
+      if (!msg) continue;
+      const mine = msg.user_id === userId;
+      if (forEveryone && mine) {
+        await supabase.from("messages").delete().eq("id", id);
+      } else {
+        const updated = [...(msg.deleted_for || []), userId];
+        await supabase.from("messages").update({ deleted_for: updated }).eq("id", id);
+      }
+    }
+    if (forEveryone) {
+      setAllMessages((prev) => prev.filter((m) => !selectedMsgs.includes(m.id)));
+    } else {
+      setAllMessages((prev) => prev.map((m) => selectedMsgs.includes(m.id)
+        ? { ...m, deleted_for: [...(m.deleted_for || []), userId] } : m));
+    }
+    cancelSelection();
+  };
 
   // ─── 13. Render content ───────────────────────────────────────────────────
   const renderContent = (m: any) => {
@@ -794,9 +828,12 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                       backdropFilter: "blur(16px)",
                       WebkitBackdropFilter: "blur(16px)",
                       transform: isHighlighted ? "scale(1.02)" : "scale(1)",
-                      boxShadow: isHighlighted
+                      boxShadow: selectedMsgs.includes(m.id)
+                        ? `0 0 0 2.5px ${t.accent}, 0 8px 32px rgba(0,0,0,0.3)`
+                        : isHighlighted
                         ? `0 0 0 2px ${t.accent}, 0 8px 32px rgba(0,0,0,0.3)`
                         : "0 2px 12px rgba(0,0,0,0.2)",
+                      opacity: selectMode && !selectedMsgs.includes(m.id) ? 0.6 : 1,
                     }}
                   >
                     {!mine && (
@@ -901,6 +938,34 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
               {uploading ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
               {uploading ? "Bhej raha..." : "Bhejo"}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Multi-select Bar ── */}
+      {selectMode && (
+        <div className="fixed bottom-0 w-full z-50 flex items-center justify-between px-4 py-3 gap-3"
+          style={{ background: t.headerBg, borderTop: `1px solid ${t.border}`, backdropFilter: "blur(20px)" }}>
+          <button onClick={cancelSelection} className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium"
+            style={{ background: t.surface, color: t.dateText, border: `1px solid ${t.border}` }}>
+            <X className="size-4" /> Cancel
+          </button>
+          <span className="text-sm font-bold" style={{ color: t.accent }}>
+            {selectedMsgs.length} selected
+          </span>
+          <div className="flex gap-2">
+            <button onClick={() => deleteSelected(false)}
+              className="px-3 py-2 rounded-xl text-sm font-medium"
+              style={{ background: t.surface, color: t.otherBubbleText, border: `1px solid ${t.border}` }}>
+              Mere liye
+            </button>
+            {selectedMsgs.every((id) => allMessages.find((m) => m.id === id)?.user_id === userId) && (
+              <button onClick={() => deleteSelected(true)}
+                className="px-3 py-2 rounded-xl text-sm font-semibold"
+                style={{ background: "linear-gradient(135deg,#dc2626,#ef4444)", color: "#fff" }}>
+                Sabke liye
+              </button>
+            )}
           </div>
         </div>
       )}
