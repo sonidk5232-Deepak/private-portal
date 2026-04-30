@@ -577,21 +577,29 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     setShowWallpaperPanel(false); setCustomUrl("");
   };
 
-  const handleTouchStart = (id: string, mine: boolean) => {
+  const handleTouchStart = (id: string) => {
     longPressTimer.current = setTimeout(() => {
-      if (selectMode) return;
       setSelectMode(true);
-      setSelectedMsgs([id]);
+      setSelectedMsgs((prev) => prev.includes(id) ? prev : [...prev, id]);
+      // vibrate on long press if supported
+      if (navigator.vibrate) navigator.vibrate(50);
     }, 2000);
   };
-  const handleTouchEnd = () => { if (longPressTimer.current) clearTimeout(longPressTimer.current); };
+  const handleTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
 
   const toggleSelectMsg = (id: string) => {
-    if (!selectMode) return;
     setSelectedMsgs((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   };
 
   const cancelSelection = () => { setSelectMode(false); setSelectedMsgs([]); };
+
+  // Auto-cancel if somehow selectMode on with 0 msgs
+  useEffect(() => { if(selectMode && selectedMsgs.length === 0) { const t = setTimeout(cancelSelection, 300); return () => clearTimeout(t); } }, [selectMode, selectedMsgs]);
 
   const deleteSelected = async (forEveryone: boolean) => {
     for (const id of selectedMsgs) {
@@ -816,7 +824,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                     id={`bubble-${m.id}`}
                     onContextMenu={(e) => { e.preventDefault(); setDeleteModal({ id: m.id, mine }); }}
                     onDoubleClick={() => { setReplyTo(m); textareaRef.current?.focus(); }}
-                    onTouchStart={() => handleTouchStart(m.id, mine)}
+                    onTouchStart={() => handleTouchStart(m.id)}
                     onTouchEnd={handleTouchEnd}
                     onTouchMove={handleTouchEnd}
                     className="rounded-2xl px-3.5 py-2.5 cursor-pointer select-none transition-all duration-300"
@@ -869,9 +877,8 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                           }
                           {/* ── Info button for seen time ── */}
                           <button
-                            onClick={(e) => { e.stopPropagation(); if(!selectMode) setInfoModal(m); }}
-                            onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); if(!selectMode) setInfoModal(m); }}
-                            className="opacity-60 hover:opacity-100 active:opacity-100 transition-opacity p-1 -m-1"
+                            onPointerUp={(e) => { e.stopPropagation(); e.preventDefault(); if(!selectMode) setInfoModal(m); }}
+                            className="opacity-60 hover:opacity-100 active:opacity-100 transition-opacity p-1.5 -m-1"
                             title="Message info"
                             style={{ color: t.time }}>
                             <Info className="size-3.5" />
@@ -943,9 +950,9 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
       )}
 
       {/* ── Multi-select Bar ── */}
-      {selectMode && (
-        <div className="fixed bottom-0 w-full z-50 flex items-center justify-between px-4 py-3 gap-3"
-          style={{ background: t.headerBg, borderTop: `1px solid ${t.border}`, backdropFilter: "blur(20px)" }}>
+      {selectMode && selectedMsgs.length > 0 && (
+        <div className="fixed bottom-0 w-full z-[60] flex items-center justify-between px-4 py-4 gap-3"
+          style={{ background: t.surfaceSolid, borderTop: `2px solid ${t.accent}`, backdropFilter: "blur(20px)" }}>
           <button onClick={cancelSelection} className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium"
             style={{ background: t.surface, color: t.dateText, border: `1px solid ${t.border}` }}>
             <X className="size-4" /> Cancel
@@ -1027,10 +1034,9 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
 
       {/* ── Message Info / Seen Time Modal ── */}
       {infoModal && (
-        <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center px-6"
-          onClick={() => setInfoModal(null)}
-          style={{ backdropFilter: "blur(8px)" }}>
-          <div className="rounded-2xl w-full max-w-xs p-6 shadow-2xl"
+        <div className="fixed inset-0 bg-black/75 z-[100] flex items-center justify-center px-6"
+          onClick={() => setInfoModal(null)}>
+          <div className="rounded-2xl w-full p-6 shadow-2xl"
             style={{ background: t.surfaceSolid, border: `1px solid ${t.border}`, maxWidth: "320px", margin: "0 auto" }}
             onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-5">
@@ -1084,7 +1090,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
       {showThemePanel && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-end justify-center"
           onClick={() => setShowThemePanel(false)}
-          style={{ backdropFilter: "blur(6px)" }}>
+          >
           <div className="rounded-t-3xl w-full max-w-lg p-5 pt-4"
             style={{ background: t.surfaceSolid, border: `1px solid ${t.border}`, borderBottom: "none" }}
             onClick={(e) => e.stopPropagation()}>
@@ -1135,7 +1141,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
       {showWallpaperPanel && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-end justify-center"
           onClick={() => setShowWallpaperPanel(false)}
-          style={{ backdropFilter: "blur(6px)" }}>
+          >
           <div className="rounded-t-3xl w-full max-w-lg p-5 pt-4"
             style={{ background: t.surfaceSolid, border: `1px solid ${t.border}`, borderBottom: "none" }}
             onClick={(e) => e.stopPropagation()}>
@@ -1185,7 +1191,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
       {showClearConfirm && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center px-4"
           onClick={() => setShowClearConfirm(false)}
-          style={{ backdropFilter: "blur(6px)" }}>
+          >
           <div className="rounded-2xl w-full max-w-sm p-6 shadow-2xl"
             style={{ background: t.surfaceSolid, border: `1px solid ${t.border}` }}
             onClick={(e) => e.stopPropagation()}>
@@ -1217,7 +1223,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
       {deleteModal && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-end justify-center pb-8"
           onClick={() => setDeleteModal(null)}
-          style={{ backdropFilter: "blur(6px)" }}>
+          >
           <div className="rounded-2xl w-full max-w-sm mx-4 overflow-hidden shadow-2xl"
             style={{ background: t.surfaceSolid, border: `1px solid ${t.border}` }}
             onClick={(e) => e.stopPropagation()}>
