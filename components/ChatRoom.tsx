@@ -323,12 +323,14 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
   }, [supabase, userId]);
 
   // ─── 2. Blue Tick (simple - mark all received messages as seen) ──────────
-  useEffect(() => {
-    const unseen = allMessages.filter((m) => m.user_id !== userId && !m.is_seen);
-    if (unseen.length === 0) return;
-    const ids = unseen.map((m) => m.id);
-    supabase.from("messages").update({ is_seen: true }).in("id", ids);
-  }, [allMessages, userId, supabase]);
+useEffect(() => {
+  const unseen = allMessages.filter((m) => m.user_id !== userId && !m.is_seen);
+  if (unseen.length === 0) return;
+  const ids = unseen.map((m) => m.id);
+  supabase.from("messages").update({ is_seen: true }).in("id", ids).then(({ error }) => {
+    if (error) console.error("Seen update error:", error);
+  });
+}, [allMessages, userId, supabase]);
 
   // ─── 3. Online / Last Seen ────────────────────────────────────────────────
   useEffect(() => {
