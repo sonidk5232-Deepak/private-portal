@@ -577,19 +577,28 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     setShowWallpaperPanel(false); setCustomUrl("");
   };
 
+  const longPressTriggered = useRef(false);
+
   const handleTouchStart = (id: string) => {
+    longPressTriggered.current = false;
     longPressTimer.current = setTimeout(() => {
+      longPressTriggered.current = true;
       setSelectMode(true);
       setSelectedMsgs((prev) => prev.includes(id) ? prev : [...prev, id]);
-      // vibrate on long press if supported
-      if (navigator.vibrate) navigator.vibrate(50);
-    }, 2000);
+      if (navigator.vibrate) navigator.vibrate(60);
+    }, 1500);
   };
-  const handleTouchEnd = () => {
+
+  const clearLongPress = () => {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
     }
+  };
+
+  const handleTouchEnd = () => {
+    clearLongPress();
+    longPressTriggered.current = false;
   };
 
   const toggleSelectMsg = (id: string) => {
@@ -597,9 +606,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
   };
 
   const cancelSelection = () => { setSelectMode(false); setSelectedMsgs([]); };
-
-  // Auto-cancel if somehow selectMode on with 0 msgs
-  useEffect(() => { if(selectMode && selectedMsgs.length === 0) { const t = setTimeout(cancelSelection, 300); return () => clearTimeout(t); } }, [selectMode, selectedMsgs]);
 
   const deleteSelected = async (forEveryone: boolean) => {
     for (const id of selectedMsgs) {
