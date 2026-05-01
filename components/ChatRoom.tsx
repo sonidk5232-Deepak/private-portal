@@ -818,23 +818,27 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
               )}
 
               <div className={`flex ${mine ? "justify-end" : "justify-start"} mb-2 group`}>
-                {/* Reply button for others */}
+                {/* Action buttons for others */}
                 {!mine && (
-                  <button onClick={() => { setReplyTo(m); textareaRef.current?.focus(); }}
-                    className="opacity-40 group-hover:opacity-100 transition-all duration-200 mr-1.5 self-end mb-1 p-1.5 rounded-xl hover:scale-105"
-                    style={{ background: t.surface, color: t.accent, border: `1px solid ${t.border}` }}>
-                    <CornerUpLeft className="size-3.5" />
-                  </button>
+                  <div className="flex flex-col gap-1 mr-1.5 self-end mb-1 opacity-40 group-hover:opacity-100 transition-all duration-200">
+                    <button onClick={() => { setReplyTo(m); textareaRef.current?.focus(); }}
+                      className="p-1.5 rounded-xl hover:scale-105"
+                      style={{ background: t.surface, color: t.accent, border: `1px solid ${t.border}` }}>
+                      <CornerUpLeft className="size-3.5" />
+                    </button>
+                    <button onClick={() => { toggleSelectMsg(m.id); if(!selectMode) setSelectMode(true); }}
+                      className="p-1.5 rounded-xl hover:scale-105"
+                      style={{ background: selectedMsgs.includes(m.id) ? t.accent : t.surface, color: selectedMsgs.includes(m.id) ? '#fff' : t.dateText, border: `1px solid ${t.border}` }}
+                      title="Select">
+                      <span className="text-[10px] font-bold">{selectedMsgs.includes(m.id) ? '✓' : '☐'}</span>
+                    </button>
+                  </div>
                 )}
 
                 <div className="flex flex-col gap-1 max-w-[82%]">
                   <div
                     id={`bubble-${m.id}`}
-                    onContextMenu={(e) => { e.preventDefault(); setDeleteModal({ id: m.id, mine }); }}
-                    onDoubleClick={() => { setReplyTo(m); textareaRef.current?.focus(); }}
-                    onTouchStart={() => handleTouchStart(m.id)}
-                    onTouchEnd={handleTouchEnd}
-                    onTouchMove={handleTouchEnd}
+                    onClick={() => { if (selectMode) toggleSelectMsg(m.id); }}
                     className="rounded-2xl px-3.5 py-2.5 cursor-pointer select-none transition-all duration-300"
                     style={{
                       background: mine ? t.myBubble : t.otherBubble,
@@ -897,13 +901,21 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                   </div>
                 </div>
 
-                {/* Reply button for mine */}
+                {/* Action buttons for mine */}
                 {mine && (
-                  <button onClick={() => { setReplyTo(m); textareaRef.current?.focus(); }}
-                    className="opacity-40 group-hover:opacity-100 transition-all duration-200 ml-1.5 self-end mb-1 p-1.5 rounded-xl hover:scale-105"
-                    style={{ background: t.surface, color: t.accent, border: `1px solid ${t.border}` }}>
-                    <CornerUpLeft className="size-3.5" />
-                  </button>
+                  <div className="flex flex-col gap-1 ml-1.5 self-end mb-1 opacity-40 group-hover:opacity-100 transition-all duration-200">
+                    <button onClick={() => { setReplyTo(m); textareaRef.current?.focus(); }}
+                      className="p-1.5 rounded-xl hover:scale-105"
+                      style={{ background: t.surface, color: t.accent, border: `1px solid ${t.border}` }}>
+                      <CornerUpLeft className="size-3.5" />
+                    </button>
+                    <button onClick={() => { toggleSelectMsg(m.id); if(!selectMode) setSelectMode(true); }}
+                      className="p-1.5 rounded-xl hover:scale-105"
+                      style={{ background: selectedMsgs.includes(m.id) ? t.accent : t.surface, color: selectedMsgs.includes(m.id) ? '#fff' : t.dateText, border: `1px solid ${t.border}` }}
+                      title="Select">
+                      <span className="text-[10px] font-bold">{selectedMsgs.includes(m.id) ? '✓' : '☐'}</span>
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
