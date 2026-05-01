@@ -598,10 +598,12 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
 
   const handleTouchEnd = () => {
     clearLongPress();
-    longPressTriggered.current = false;
+    // small delay so onClick doesn't fire right after long press activates selectMode
+    setTimeout(() => { longPressTriggered.current = false; }, 100);
   };
 
   const toggleSelectMsg = (id: string) => {
+    if (longPressTriggered.current) return; // ignore toggle right after long press
     setSelectedMsgs((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   };
 
