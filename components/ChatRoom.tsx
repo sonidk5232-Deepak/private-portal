@@ -826,11 +826,11 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                       style={{ background: t.surface, color: t.accent, border: `1px solid ${t.border}` }}>
                       <CornerUpLeft className="size-3.5" />
                     </button>
-                    <button onClick={() => { toggleSelectMsg(m.id); if(!selectMode) setSelectMode(true); }}
-                      className="p-1.5 rounded-xl hover:scale-105"
-                      style={{ background: selectedMsgs.includes(m.id) ? t.accent : t.surface, color: selectedMsgs.includes(m.id) ? '#fff' : t.dateText, border: `1px solid ${t.border}` }}
+                    <button onClick={(e) => { e.stopPropagation(); if(!selectMode) setSelectMode(true); toggleSelectMsg(m.id); }}
+                      className="rounded-xl flex items-center justify-center active:scale-95 transition-all"
+                      style={{ background: selectedMsgs.includes(m.id) ? t.accent : t.surface, color: selectedMsgs.includes(m.id) ? '#fff' : t.dateText, border: `1px solid ${t.border}`, width: '36px', height: '36px' }}
                       title="Select">
-                      <span className="text-[10px] font-bold">{selectedMsgs.includes(m.id) ? '✓' : '☐'}</span>
+                      <span className="text-base font-bold leading-none">{selectedMsgs.includes(m.id) ? '✓' : '☐'}</span>
                     </button>
                   </div>
                 )}
@@ -838,7 +838,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                 <div className="flex flex-col gap-1 max-w-[82%]">
                   <div
                     id={`bubble-${m.id}`}
-                    onClick={() => { if (selectMode) toggleSelectMsg(m.id); }}
+                    onClick={(e) => { if (selectMode && !(e.target as HTMLElement).closest('button')) toggleSelectMsg(m.id); }}
                     className="rounded-2xl px-3.5 py-2.5 cursor-pointer select-none transition-all duration-300"
                     style={{
                       background: mine ? t.myBubble : t.otherBubble,
@@ -889,11 +889,12 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                           }
                           {/* ── Info button for seen time ── */}
                           <button
-                            onPointerUp={(e) => { e.stopPropagation(); e.preventDefault(); if(!selectMode) setInfoModal(m); }}
-                            className="opacity-60 hover:opacity-100 active:opacity-100 transition-opacity p-1.5 -m-1"
+                            onClick={(e) => { e.stopPropagation(); e.preventDefault(); setInfoModal(m); }}
+                            onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); setInfoModal(m); }}
+                            className="opacity-60 hover:opacity-100 active:opacity-100 transition-opacity"
                             title="Message info"
-                            style={{ color: t.time }}>
-                            <Info className="size-3.5" />
+                            style={{ color: t.time, padding: '8px', margin: '-6px' }}>
+                            <Info className="size-4" />
                           </button>
                         </>
                       )}
@@ -909,11 +910,11 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                       style={{ background: t.surface, color: t.accent, border: `1px solid ${t.border}` }}>
                       <CornerUpLeft className="size-3.5" />
                     </button>
-                    <button onClick={() => { toggleSelectMsg(m.id); if(!selectMode) setSelectMode(true); }}
-                      className="p-1.5 rounded-xl hover:scale-105"
-                      style={{ background: selectedMsgs.includes(m.id) ? t.accent : t.surface, color: selectedMsgs.includes(m.id) ? '#fff' : t.dateText, border: `1px solid ${t.border}` }}
+                    <button onClick={() => { if(!selectMode) setSelectMode(true); toggleSelectMsg(m.id); }}
+                      className="p-2.5 rounded-xl hover:scale-105 flex items-center justify-center"
+                      style={{ background: selectedMsgs.includes(m.id) ? t.accent : t.surface, color: selectedMsgs.includes(m.id) ? '#fff' : t.dateText, border: `1px solid ${t.border}`, minWidth: '32px', minHeight: '32px' }}
                       title="Select">
-                      <span className="text-[10px] font-bold">{selectedMsgs.includes(m.id) ? '✓' : '☐'}</span>
+                      <span className="text-[13px] font-bold leading-none">{selectedMsgs.includes(m.id) ? '✓' : '☐'}</span>
                     </button>
                   </div>
                 )}
