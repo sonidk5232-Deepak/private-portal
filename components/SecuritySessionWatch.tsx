@@ -10,7 +10,7 @@ export default function SecuritySessionWatch() {
 
   useEffect(() => {
     const blankPage = () => {
-      document.body.style.visibility   = "hidden";
+      document.body.style.visibility    = "hidden";
       document.body.style.pointerEvents = "none";
       const veil = document.createElement("div");
       veil.id = "__security_veil__";
@@ -22,18 +22,13 @@ export default function SecuritySessionWatch() {
     };
 
     const clearHistoryAndRedirect = () => {
-      // History saaf karo
       const depth = window.history.length;
       for (let i = 0; i < depth; i++) {
         window.history.pushState(null, "", "about:blank");
       }
       window.history.replaceState(null, "", "about:blank");
-
-      // Tab band karne ki koshish
       window.open("", "_self");
       window.close();
-
-      // Agar tab band nahi hua toh blank page
       setTimeout(() => {
         window.location.replace("about:blank");
         document.title = "";
@@ -42,21 +37,38 @@ export default function SecuritySessionWatch() {
     };
 
     const hardLogout = async () => {
-      if (signingOut.current)    return;
+      if (signingOut.current)     return;
       if (filePickerOpen.current) return;
 
       signingOut.current = true;
 
-      // Turant page blank karo
+      // 1. Turant page blank karo — kuch nazar na aaye
       blankPage();
 
-      // Background mein signOut karo
       try {
         const supabase = createClient();
+
+        // 2. Pehle user ko offline mark karo
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase
+            .from("profiles")
+            .update({
+              is_online: false,
+              last_seen_at: new Date().toISOString(),
+            })
+            .eq("id", user.id);
+        }
+
+        // 3. Saare realtime channels band karo
+        await supabase.removeAllChannels();
+
+        // 4. Sign out karo
         await supabase.auth.signOut();
+
       } catch (_) {}
 
-      // Tab band + history saaf
+      // 5. Tab band + history saaf
       clearHistoryAndRedirect();
     };
 
@@ -72,9 +84,9 @@ export default function SecuritySessionWatch() {
       }
     };
 
-    const onPopState  = () => void hardLogout();
+    const onPopState = () => void hardLogout();
 
-    const onPageShow  = (e: PageTransitionEvent) => {
+    const onPageShow = (e: PageTransitionEvent) => {
       if (e.persisted) void hardLogout();
     };
 
@@ -100,13 +112,13 @@ export default function SecuritySessionWatch() {
     observer.observe(document.body, { childList: true, subtree: true });
 
     document.addEventListener("visibilitychange", onVisibility);
-    window.addEventListener("popstate",  onPopState);
-    window.addEventListener("pageshow",  onPageShow as EventListener);
+    window.addEventListener("popstate", onPopState);
+    window.addEventListener("pageshow", onPageShow as EventListener);
 
     return () => {
       document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("popstate",  onPopState);
-      window.removeEventListener("pageshow",  onPageShow as EventListener);
+      window.removeEventListener("popstate", onPopState);
+      window.removeEventListener("pageshow", onPageShow as EventListener);
       observer.disconnect();
       if (filePickerTimer.current) clearTimeout(filePickerTimer.current);
     };
