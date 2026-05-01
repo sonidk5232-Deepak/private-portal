@@ -4,15 +4,14 @@ import { createClient } from "@/lib/supabase/client";
 import { useEffect, useRef } from "react";
 
 export default function SecuritySessionWatch() {
-  const signingOut     = useRef(false);
-  const filePickerOpen = useRef(false);
+  const signingOut      = useRef(false);
+  const filePickerOpen  = useRef(false);
   const filePickerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const blankPage = () => {
-      document.body.style.visibility  = "hidden";
+      document.body.style.visibility   = "hidden";
       document.body.style.pointerEvents = "none";
-
       const veil = document.createElement("div");
       veil.id = "__security_veil__";
       Object.assign(veil.style, {
@@ -23,13 +22,23 @@ export default function SecuritySessionWatch() {
     };
 
     const clearHistoryAndRedirect = () => {
-      window.history.replaceState(null, "", "/login");
+      // History saaf karo
       const depth = window.history.length;
       for (let i = 0; i < depth; i++) {
-        window.history.pushState(null, "", "/login");
+        window.history.pushState(null, "", "about:blank");
       }
-      window.history.replaceState(null, "", "/login");
-      window.location.replace("/login");
+      window.history.replaceState(null, "", "about:blank");
+
+      // Tab band karne ki koshish
+      window.open("", "_self");
+      window.close();
+
+      // Agar tab band nahi hua toh blank page
+      setTimeout(() => {
+        window.location.replace("about:blank");
+        document.title = "";
+        document.body.innerHTML = "";
+      }, 100);
     };
 
     const hardLogout = async () => {
@@ -37,13 +46,18 @@ export default function SecuritySessionWatch() {
       if (filePickerOpen.current) return;
 
       signingOut.current = true;
-      blankPage();
-      clearHistoryAndRedirect();
 
+      // Turant page blank karo
+      blankPage();
+
+      // Background mein signOut karo
       try {
         const supabase = createClient();
         await supabase.auth.signOut();
       } catch (_) {}
+
+      // Tab band + history saaf
+      clearHistoryAndRedirect();
     };
 
     const onVisibility = () => {
@@ -58,15 +72,15 @@ export default function SecuritySessionWatch() {
       }
     };
 
-    const onPopState = () => void hardLogout();
+    const onPopState  = () => void hardLogout();
 
-    const onPageShow = (e: PageTransitionEvent) => {
+    const onPageShow  = (e: PageTransitionEvent) => {
       if (e.persisted) void hardLogout();
     };
 
     const onFileInputClick = () => {
       filePickerOpen.current = true;
-      signingOut.current = false;
+      signingOut.current     = false;
       if (filePickerTimer.current) clearTimeout(filePickerTimer.current);
       filePickerTimer.current = setTimeout(() => {
         filePickerOpen.current = false;
@@ -86,13 +100,13 @@ export default function SecuritySessionWatch() {
     observer.observe(document.body, { childList: true, subtree: true });
 
     document.addEventListener("visibilitychange", onVisibility);
-    window.addEventListener("popstate", onPopState);
-    window.addEventListener("pageshow", onPageShow as EventListener);
+    window.addEventListener("popstate",  onPopState);
+    window.addEventListener("pageshow",  onPageShow as EventListener);
 
     return () => {
       document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("popstate", onPopState);
-      window.removeEventListener("pageshow", onPageShow as EventListener);
+      window.removeEventListener("popstate",  onPopState);
+      window.removeEventListener("pageshow",  onPageShow as EventListener);
       observer.disconnect();
       if (filePickerTimer.current) clearTimeout(filePickerTimer.current);
     };
