@@ -10,6 +10,7 @@ export default function SecuritySessionWatch() {
 
   useEffect(() => {
     const blankPage = () => {
+      (window as any).__loggedOut = true;
       document.body.style.visibility    = "hidden";
       document.body.style.pointerEvents = "none";
       const veil = document.createElement("div");

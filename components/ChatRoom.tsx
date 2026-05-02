@@ -237,9 +237,9 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
   const [showWallpaperPanel, setShowWallpaperPanel] = useState(false);
   const [showThemePanel, setShowThemePanel] = useState(false);
   const [lastSeenTimer, setLastSeenTimer] = useState(0);
-  const [infoModal, setInfoModal]         = useState<any | null>(null); // ← seen-time info
-  const [selectedMsgs, setSelectedMsgs]   = useState<string[]>([]); // ← multi-select
-  const [selectMode, setSelectMode]       = useState(false); // ← selection mode
+  const [infoModal, setInfoModal]         = useState<any | null>(null);
+  const [selectedMsgs, setSelectedMsgs]   = useState<string[]>([]);
+  const [selectMode, setSelectMode]       = useState(false);
 
   const [themeKey, setThemeKey] = useState<ThemeKey>(() => {
     if (typeof window === "undefined") return "aurora";
@@ -324,8 +324,9 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     return () => { supabase.removeChannel(channel); };
   }, [supabase, userId]);
 
-  // ─── 2. Blue Tick (simple - mark all received messages as seen) ──────────
+  // ─── 2. Blue Tick (mark seen) — LOGOUT CHECK ADDED ───────────────────────
   useEffect(() => {
+    if ((window as any).__loggedOut) return; // ← LOGOUT HO GAYA, SEEN MAT KARO
     const unseen = allMessages.filter((m) => m.user_id !== userId && !m.is_seen);
     if (unseen.length === 0) return;
     const ids = unseen.map((m) => m.id);
@@ -598,12 +599,11 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
 
   const handleTouchEnd = () => {
     clearLongPress();
-    // small delay so onClick doesn't fire right after long press activates selectMode
     setTimeout(() => { longPressTriggered.current = false; }, 100);
   };
 
   const toggleSelectMsg = (id: string) => {
-    if (longPressTriggered.current) return; // ignore toggle right after long press
+    if (longPressTriggered.current) return;
     setSelectedMsgs((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   };
 
@@ -713,7 +713,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
 
   return (
     <div className="flex h-[100dvh] flex-col relative overflow-hidden" style={{ background: t.bg, color: t.otherBubbleText }}>
-      
+
       {/* ── Ambient background orbs ── */}
       {!wallpaper && (
         <>
@@ -725,7 +725,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
             <div className="absolute -bottom-20 left-1/3 w-[350px] h-[350px] rounded-full blur-[90px] opacity-50"
               style={{ background: t.orb3 }} />
           </div>
-          {/* Subtle grid overlay */}
           <div className="pointer-events-none absolute inset-0 z-0 opacity-[0.025]"
             style={{
               backgroundImage: `linear-gradient(${isLightTheme ? "#000" : "#fff"} 1px, transparent 1px), linear-gradient(90deg, ${isLightTheme ? "#000" : "#fff"} 1px, transparent 1px)`,
@@ -747,7 +746,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
           WebkitBackdropFilter: "blur(20px)",
         }}>
         <div className="flex items-center gap-3">
-          {/* Logo mark */}
           <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
             style={{ background: t.accentSoft, border: `1px solid ${t.borderGlow}` }}>
             <span className="text-base">🔒</span>
@@ -818,7 +816,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
               )}
 
               <div className={`flex ${mine ? "justify-end" : "justify-start"} mb-2 group`}>
-                {/* Action buttons for others */}
                 {!mine && (
                   <div className="flex flex-col gap-1 mr-1.5 self-end mb-1 opacity-40 group-hover:opacity-100 transition-all duration-200">
                     <button onClick={() => { setReplyTo(m); textareaRef.current?.focus(); }}
@@ -876,7 +873,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
 
                     {renderContent(m)}
 
-                    {/* Timestamp row */}
                     <div className="flex items-center justify-end gap-1.5 mt-1.5">
                       <span className="text-[9px] font-medium" style={{ color: t.time }}>
                         {new Date(m.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}
@@ -887,7 +883,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                             ? <CheckCheck className="size-3.5" style={{ color: t.tickSeen }} />
                             : <Check className="size-3" style={{ color: t.time }} />
                           }
-                          {/* ── Info button for seen time ── */}
                           <button
                             onClick={(e) => { e.stopPropagation(); e.preventDefault(); setInfoModal(m); }}
                             onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); setInfoModal(m); }}
@@ -902,7 +897,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                   </div>
                 </div>
 
-                {/* Action buttons for mine */}
                 {mine && (
                   <div className="flex flex-col gap-1 ml-1.5 self-end mb-1 opacity-40 group-hover:opacity-100 transition-all duration-200">
                     <button onClick={() => { setReplyTo(m); textareaRef.current?.focus(); }}
@@ -1053,7 +1047,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
 
       {/* ══════════════════ MODALS ══════════════════ */}
 
-      {/* ── Message Info / Seen Time Modal ── */}
+      {/* ── Message Info Modal ── */}
       {infoModal && (
         <div className="fixed inset-0 bg-black/75 z-[100] flex items-center justify-center px-6"
           onClick={() => setInfoModal(null)}>
@@ -1067,8 +1061,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
               </div>
               <h2 className="font-bold text-base" style={{ color: t.otherBubbleText }}>Message Info</h2>
             </div>
-
-            {/* Sent time */}
             <div className="flex items-start gap-3 mb-3 p-3 rounded-xl" style={{ background: t.surface }}>
               <Clock className="size-4 shrink-0 mt-0.5" style={{ color: t.dateText }} />
               <div>
@@ -1078,8 +1070,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                 </p>
               </div>
             </div>
-
-            {/* Seen time */}
             <div className="flex items-start gap-3 p-3 rounded-xl" style={{ background: t.surface }}>
               <CheckCheck className="size-4 shrink-0 mt-0.5" style={{ color: infoModal.is_seen ? t.tickSeen : t.dateText }} />
               <div>
@@ -1097,7 +1087,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                 )}
               </div>
             </div>
-
             <button onClick={() => setInfoModal(null)}
               className="w-full mt-4 py-2.5 rounded-xl text-sm font-medium transition-all hover:opacity-90"
               style={{ background: t.accentSoft, color: t.accent, border: `1px solid ${t.accent}33` }}>
@@ -1110,12 +1099,10 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
       {/* ── Theme Panel ── */}
       {showThemePanel && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-end justify-center"
-          onClick={() => setShowThemePanel(false)}
-          >
+          onClick={() => setShowThemePanel(false)}>
           <div className="rounded-t-3xl w-full max-w-lg p-5 pt-4"
             style={{ background: t.surfaceSolid, border: `1px solid ${t.border}`, borderBottom: "none" }}
             onClick={(e) => e.stopPropagation()}>
-            {/* Handle bar */}
             <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ background: t.border }} />
             <div className="flex justify-between items-center mb-5">
               <div>
@@ -1161,8 +1148,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
       {/* ── Wallpaper Panel ── */}
       {showWallpaperPanel && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-end justify-center"
-          onClick={() => setShowWallpaperPanel(false)}
-          >
+          onClick={() => setShowWallpaperPanel(false)}>
           <div className="rounded-t-3xl w-full max-w-lg p-5 pt-4"
             style={{ background: t.surfaceSolid, border: `1px solid ${t.border}`, borderBottom: "none" }}
             onClick={(e) => e.stopPropagation()}>
@@ -1211,8 +1197,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
       {/* ── Clear Chat ── */}
       {showClearConfirm && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center px-4"
-          onClick={() => setShowClearConfirm(false)}
-          >
+          onClick={() => setShowClearConfirm(false)}>
           <div className="rounded-2xl w-full max-w-sm p-6 shadow-2xl"
             style={{ background: t.surfaceSolid, border: `1px solid ${t.border}` }}
             onClick={(e) => e.stopPropagation()}>
@@ -1243,8 +1228,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
       {/* ── Delete Modal ── */}
       {deleteModal && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-end justify-center pb-8"
-          onClick={() => setDeleteModal(null)}
-          >
+          onClick={() => setDeleteModal(null)}>
           <div className="rounded-2xl w-full max-w-sm mx-4 overflow-hidden shadow-2xl"
             style={{ background: t.surfaceSolid, border: `1px solid ${t.border}` }}
             onClick={(e) => e.stopPropagation()}>
