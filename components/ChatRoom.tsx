@@ -7,7 +7,7 @@ import {
   Trash2, Image as ImageIcon, Reply, CornerUpLeft,
   Eraser, Palette, Info, Clock
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, useCallback, memo } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 
 // ─── THEMES ───────────────────────────────────────────────────────────────────
 const THEMES = {
@@ -402,17 +402,12 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
   }, [sendTypingSignal]);
 
   // ─── 5. Scroll ────────────────────────────────────────────────────────────
-  const scrollThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleScroll = useCallback(() => {
-    if (scrollThrottleRef.current) return;
-    scrollThrottleRef.current = setTimeout(() => {
-      scrollThrottleRef.current = null;
-      const el = mainRef.current;
-      if (!el) return;
-      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-      setIsAtBottom(atBottom);
-      if (atBottom) { setUnreadCount(0); firstUnreadId.current = null; }
-    }, 100);
+    const el = mainRef.current;
+    if (!el) return;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    setIsAtBottom(atBottom);
+    if (atBottom) { setUnreadCount(0); firstUnreadId.current = null; }
   }, []);
 
   const scrollToBottom = () => {
@@ -636,7 +631,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
   };
 
   // ─── 13. Render content ───────────────────────────────────────────────────
-  const renderContent = useCallback((m: any) => {
+  const renderContent = (m: any) => {
     if (m.file_type === "image") return (
       <img src={m.file_url} alt={m.file_name} onClick={() => setFullscreenImg(m.file_url)}
         className="max-w-[220px] max-h-[280px] rounded-xl cursor-zoom-in object-cover block" />
@@ -660,14 +655,11 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
       </a>
     );
     return <p className="text-[14px] leading-snug whitespace-pre-wrap break-words">{m.text}</p>;
-  }, [t, setFullscreenImg]);
+  };
 
   // ─── 14. Timeline ─────────────────────────────────────────────────────────
-  const visibleMessages = useMemo(
-    () => allMessages.filter((m) => !(m.deleted_for || []).includes(userId)),
-    [allMessages, userId]
-  );
-  const timeline = useMemo(() => visibleMessages.reduce((acc: any[], m: any, i: number, arr: any[]) => {
+  const visibleMessages = allMessages.filter((m) => !(m.deleted_for || []).includes(userId));
+  const timeline = visibleMessages.reduce((acc: any[], m: any, i: number, arr: any[]) => {
     const date = new Date(m.created_at).toDateString();
     const prevDate = i > 0 ? new Date(arr[i - 1].created_at).toDateString() : null;
     if (date !== prevDate) {
@@ -678,10 +670,10 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     }
     acc.push({ kind: "message", message: m, isFirstUnread: m.id === firstUnreadId.current });
     return acc;
-  }, []), [visibleMessages]);
+  }, []);
 
   // ─── 15. Header subtitle ──────────────────────────────────────────────────
-  const headerSubtitle = useMemo(() => {
+  const headerSubtitle = () => {
     if (othersTyping) return (
       <span className="text-[11px] flex items-center gap-1.5" style={{ color: t.accent }}>
         <span className="flex gap-[3px] items-end">
@@ -706,8 +698,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
         Last seen {formatLastSeen(otherUser.last_seen_at)}
       </span>
     );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [othersTyping, otherUser, lastSeenTimer, t]);
+  };
 
   const isLightTheme = themeKey === "ice";
 
@@ -766,7 +757,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
             }}>
               Private Portal
             </h1>
-            <div className="min-h-[14px] flex items-center">{headerSubtitle}</div>
+            <div className="min-h-[14px] flex items-center">{headerSubtitle()}</div>
           </div>
         </div>
         <div className="flex items-center gap-0.5">
