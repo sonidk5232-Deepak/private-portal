@@ -7,7 +7,7 @@ import {
   Trash2, Image as ImageIcon, Reply, CornerUpLeft,
   Eraser, Palette, Info, Clock
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback, memo } from "react";
 
 // ─── THEMES ───────────────────────────────────────────────────────────────────
 const THEMES = {
@@ -237,9 +237,9 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
   const [showWallpaperPanel, setShowWallpaperPanel] = useState(false);
   const [showThemePanel, setShowThemePanel] = useState(false);
   const [lastSeenTimer, setLastSeenTimer] = useState(0);
-  const [infoModal, setInfoModal]         = useState<any | null>(null);
-  const [selectedMsgs, setSelectedMsgs]   = useState<string[]>([]);
-  const [selectMode, setSelectMode]       = useState(false);
+  const [infoModal, setInfoModal]         = useState<any | null>(null); // ← seen-time info
+  const [selectedMsgs, setSelectedMsgs]   = useState<string[]>([]); // ← multi-select
+  const [selectMode, setSelectMode]       = useState(false); // ← selection mode
 
   const [themeKey, setThemeKey] = useState<ThemeKey>(() => {
     if (typeof window === "undefined") return "aurora";
@@ -324,9 +324,8 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     return () => { supabase.removeChannel(channel); };
   }, [supabase, userId]);
 
-  // ─── 2. Blue Tick (mark seen) — LOGOUT CHECK ADDED ───────────────────────
+  // ─── 2. Blue Tick (simple - mark all received messages as seen) ──────────
   useEffect(() => {
-    if ((window as any).__loggedOut) return; // ← LOGOUT HO GAYA, SEEN MAT KARO
     const unseen = allMessages.filter((m) => m.user_id !== userId && !m.is_seen);
     if (unseen.length === 0) return;
     const ids = unseen.map((m) => m.id);
@@ -403,12 +402,17 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
   }, [sendTypingSignal]);
 
   // ─── 5. Scroll ────────────────────────────────────────────────────────────
+  const scrollThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleScroll = useCallback(() => {
-    const el = mainRef.current;
-    if (!el) return;
-    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-    setIsAtBottom(atBottom);
-    if (atBottom) { setUnreadCount(0); firstUnreadId.current = null; }
+    if (scrollThrottleRef.current) return;
+    scrollThrottleRef.current = setTimeout(() => {
+      scrollThrottleRef.current = null;
+      const el = mainRef.current;
+      if (!el) return;
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+      setIsAtBottom(atBottom);
+      if (atBottom) { setUnreadCount(0); firstUnreadId.current = null; }
+    }, 100);
   }, []);
 
   const scrollToBottom = () => {
@@ -599,11 +603,12 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
 
   const handleTouchEnd = () => {
     clearLongPress();
+    // small delay so onClick doesn't fire right after long press activates selectMode
     setTimeout(() => { longPressTriggered.current = false; }, 100);
   };
 
   const toggleSelectMsg = (id: string) => {
-    if (longPressTriggered.current) return;
+    if (longPressTriggered.current) return; // ignore toggle right after long press
     setSelectedMsgs((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   };
 
@@ -631,7 +636,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
   };
 
   // ─── 13. Render content ───────────────────────────────────────────────────
-  const renderContent = (m: any) => {
+  const renderContent = useCallback((m: any) => {
     if (m.file_type === "image") return (
       <img src={m.file_url} alt={m.file_name} onClick={() => setFullscreenImg(m.file_url)}
         className="max-w-[220px] max-h-[280px] rounded-xl cursor-zoom-in object-cover block" />
@@ -655,11 +660,14 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
       </a>
     );
     return <p className="text-[14px] leading-snug whitespace-pre-wrap break-words">{m.text}</p>;
-  };
+  }, [t, setFullscreenImg]);
 
   // ─── 14. Timeline ─────────────────────────────────────────────────────────
-  const visibleMessages = allMessages.filter((m) => !(m.deleted_for || []).includes(userId));
-  const timeline = visibleMessages.reduce((acc: any[], m: any, i: number, arr: any[]) => {
+  const visibleMessages = useMemo(
+    () => allMessages.filter((m) => !(m.deleted_for || []).includes(userId)),
+    [allMessages, userId]
+  );
+  const timeline = useMemo(() => visibleMessages.reduce((acc: any[], m: any, i: number, arr: any[]) => {
     const date = new Date(m.created_at).toDateString();
     const prevDate = i > 0 ? new Date(arr[i - 1].created_at).toDateString() : null;
     if (date !== prevDate) {
@@ -670,10 +678,10 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     }
     acc.push({ kind: "message", message: m, isFirstUnread: m.id === firstUnreadId.current });
     return acc;
-  }, []);
+  }, []), [visibleMessages]);
 
   // ─── 15. Header subtitle ──────────────────────────────────────────────────
-  const headerSubtitle = () => {
+  const headerSubtitle = useMemo(() => {
     if (othersTyping) return (
       <span className="text-[11px] flex items-center gap-1.5" style={{ color: t.accent }}>
         <span className="flex gap-[3px] items-end">
@@ -698,7 +706,8 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
         Last seen {formatLastSeen(otherUser.last_seen_at)}
       </span>
     );
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [othersTyping, otherUser, lastSeenTimer, t]);
 
   const isLightTheme = themeKey === "ice";
 
@@ -713,28 +722,25 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
 
   return (
     <div className="flex h-[100dvh] flex-col relative overflow-hidden" style={{ background: t.bg, color: t.otherBubbleText }}>
-
+      
       {/* ── Ambient background orbs ── */}
       {!wallpaper && (
         <>
           <div className="pointer-events-none absolute inset-0 overflow-hidden z-0">
-            <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full blur-[120px] opacity-70"
+            <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full blur-[80px] opacity-40"
               style={{ background: t.orb1 }} />
-            <div className="absolute top-1/2 -right-40 w-[400px] h-[400px] rounded-full blur-[100px] opacity-60"
+            <div className="absolute top-1/2 -right-40 w-[400px] h-[400px] rounded-full blur-[70px] opacity-35"
               style={{ background: t.orb2 }} />
-            <div className="absolute -bottom-20 left-1/3 w-[350px] h-[350px] rounded-full blur-[90px] opacity-50"
+            <div className="absolute -bottom-20 left-1/3 w-[350px] h-[350px] rounded-full blur-[60px] opacity-30"
               style={{ background: t.orb3 }} />
           </div>
-          <div className="pointer-events-none absolute inset-0 z-0 opacity-[0.025]"
-            style={{
-              backgroundImage: `linear-gradient(${isLightTheme ? "#000" : "#fff"} 1px, transparent 1px), linear-gradient(90deg, ${isLightTheme ? "#000" : "#fff"} 1px, transparent 1px)`,
-              backgroundSize: "40px 40px"
-            }} />
+          {/* Subtle grid overlay */}
+
         </>
       )}
 
       {wallpaper && <div className="absolute inset-0 z-0" style={{ backgroundImage: `url('${wallpaper}')`, backgroundSize: "cover", backgroundPosition: "center" }}>
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" />
+        <div className="absolute inset-0 bg-black/45" />
       </div>}
 
       {/* ── Header ── */}
@@ -742,10 +748,11 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
         style={{
           background: t.headerBg,
           borderBottom: `1px solid ${t.border}`,
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
         }}>
         <div className="flex items-center gap-3">
+          {/* Logo mark */}
           <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
             style={{ background: t.accentSoft, border: `1px solid ${t.borderGlow}` }}>
             <span className="text-base">🔒</span>
@@ -759,7 +766,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
             }}>
               Private Portal
             </h1>
-            <div className="min-h-[14px] flex items-center">{headerSubtitle()}</div>
+            <div className="min-h-[14px] flex items-center">{headerSubtitle}</div>
           </div>
         </div>
         <div className="flex items-center gap-0.5">
@@ -791,7 +798,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                   background: t.dateBg,
                   color: t.dateText,
                   border: `1px solid ${t.border}`,
-                  backdropFilter: "blur(8px)",
                 }}>
                 {item.label}
               </span>
@@ -816,6 +822,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
               )}
 
               <div className={`flex ${mine ? "justify-end" : "justify-start"} mb-2 group`}>
+                {/* Action buttons for others */}
                 {!mine && (
                   <div className="flex flex-col gap-1 mr-1.5 self-end mb-1 opacity-40 group-hover:opacity-100 transition-all duration-200">
                     <button onClick={() => { setReplyTo(m); textareaRef.current?.focus(); }}
@@ -842,8 +849,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                       color: mine ? t.myBubbleText : t.otherBubbleText,
                       borderRadius: mine ? "18px 4px 18px 18px" : "4px 18px 18px 18px",
                       border: `1px solid ${mine ? "rgba(255,255,255,0.12)" : t.border}`,
-                      backdropFilter: "blur(16px)",
-                      WebkitBackdropFilter: "blur(16px)",
                       transform: isHighlighted ? "scale(1.02)" : "scale(1)",
                       boxShadow: selectedMsgs.includes(m.id)
                         ? `0 0 0 2.5px ${t.accent}, 0 8px 32px rgba(0,0,0,0.3)`
@@ -873,6 +878,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
 
                     {renderContent(m)}
 
+                    {/* Timestamp row */}
                     <div className="flex items-center justify-end gap-1.5 mt-1.5">
                       <span className="text-[9px] font-medium" style={{ color: t.time }}>
                         {new Date(m.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}
@@ -883,6 +889,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                             ? <CheckCheck className="size-3.5" style={{ color: t.tickSeen }} />
                             : <Check className="size-3" style={{ color: t.time }} />
                           }
+                          {/* ── Info button for seen time ── */}
                           <button
                             onClick={(e) => { e.stopPropagation(); e.preventDefault(); setInfoModal(m); }}
                             onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); setInfoModal(m); }}
@@ -897,6 +904,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                   </div>
                 </div>
 
+                {/* Action buttons for mine */}
                 {mine && (
                   <div className="flex flex-col gap-1 ml-1.5 self-end mb-1 opacity-40 group-hover:opacity-100 transition-all duration-200">
                     <button onClick={() => { setReplyTo(m); textareaRef.current?.focus(); }}
@@ -994,7 +1002,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
 
       {/* ── Footer ── */}
       <footer className="fixed bottom-0 w-full z-50"
-        style={{ background: t.headerBg, borderTop: `1px solid ${t.border}`, backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" }}>
+        style={{ background: t.headerBg, borderTop: `1px solid ${t.border}`, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}>
         {replyTo && (
           <div className="flex items-center gap-2 px-4 pt-2.5 pb-1.5 mx-auto max-w-4xl"
             style={{ borderBottom: `1px solid ${t.border}` }}>
@@ -1047,7 +1055,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
 
       {/* ══════════════════ MODALS ══════════════════ */}
 
-      {/* ── Message Info Modal ── */}
+      {/* ── Message Info / Seen Time Modal ── */}
       {infoModal && (
         <div className="fixed inset-0 bg-black/75 z-[100] flex items-center justify-center px-6"
           onClick={() => setInfoModal(null)}>
@@ -1061,6 +1069,8 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
               </div>
               <h2 className="font-bold text-base" style={{ color: t.otherBubbleText }}>Message Info</h2>
             </div>
+
+            {/* Sent time */}
             <div className="flex items-start gap-3 mb-3 p-3 rounded-xl" style={{ background: t.surface }}>
               <Clock className="size-4 shrink-0 mt-0.5" style={{ color: t.dateText }} />
               <div>
@@ -1070,6 +1080,8 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                 </p>
               </div>
             </div>
+
+            {/* Seen time */}
             <div className="flex items-start gap-3 p-3 rounded-xl" style={{ background: t.surface }}>
               <CheckCheck className="size-4 shrink-0 mt-0.5" style={{ color: infoModal.is_seen ? t.tickSeen : t.dateText }} />
               <div>
@@ -1087,6 +1099,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                 )}
               </div>
             </div>
+
             <button onClick={() => setInfoModal(null)}
               className="w-full mt-4 py-2.5 rounded-xl text-sm font-medium transition-all hover:opacity-90"
               style={{ background: t.accentSoft, color: t.accent, border: `1px solid ${t.accent}33` }}>
@@ -1099,10 +1112,12 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
       {/* ── Theme Panel ── */}
       {showThemePanel && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-end justify-center"
-          onClick={() => setShowThemePanel(false)}>
+          onClick={() => setShowThemePanel(false)}
+          >
           <div className="rounded-t-3xl w-full max-w-lg p-5 pt-4"
             style={{ background: t.surfaceSolid, border: `1px solid ${t.border}`, borderBottom: "none" }}
             onClick={(e) => e.stopPropagation()}>
+            {/* Handle bar */}
             <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ background: t.border }} />
             <div className="flex justify-between items-center mb-5">
               <div>
@@ -1148,7 +1163,8 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
       {/* ── Wallpaper Panel ── */}
       {showWallpaperPanel && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-end justify-center"
-          onClick={() => setShowWallpaperPanel(false)}>
+          onClick={() => setShowWallpaperPanel(false)}
+          >
           <div className="rounded-t-3xl w-full max-w-lg p-5 pt-4"
             style={{ background: t.surfaceSolid, border: `1px solid ${t.border}`, borderBottom: "none" }}
             onClick={(e) => e.stopPropagation()}>
@@ -1197,7 +1213,8 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
       {/* ── Clear Chat ── */}
       {showClearConfirm && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center px-4"
-          onClick={() => setShowClearConfirm(false)}>
+          onClick={() => setShowClearConfirm(false)}
+          >
           <div className="rounded-2xl w-full max-w-sm p-6 shadow-2xl"
             style={{ background: t.surfaceSolid, border: `1px solid ${t.border}` }}
             onClick={(e) => e.stopPropagation()}>
@@ -1228,7 +1245,8 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
       {/* ── Delete Modal ── */}
       {deleteModal && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-end justify-center pb-8"
-          onClick={() => setDeleteModal(null)}>
+          onClick={() => setDeleteModal(null)}
+          >
           <div className="rounded-2xl w-full max-w-sm mx-4 overflow-hidden shadow-2xl"
             style={{ background: t.surfaceSolid, border: `1px solid ${t.border}` }}
             onClick={(e) => e.stopPropagation()}>
