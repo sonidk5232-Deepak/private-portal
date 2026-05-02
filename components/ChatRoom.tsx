@@ -237,9 +237,9 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
   const [showWallpaperPanel, setShowWallpaperPanel] = useState(false);
   const [showThemePanel, setShowThemePanel] = useState(false);
   const [lastSeenTimer, setLastSeenTimer] = useState(0);
-  const [infoModal, setInfoModal]         = useState<any | null>(null); // ← seen-time info
-  const [selectedMsgs, setSelectedMsgs]   = useState<string[]>([]); // ← multi-select
-  const [selectMode, setSelectMode]       = useState(false); // ← selection mode
+  const [infoModal, setInfoModal]         = useState<any | null>(null);
+  const [selectedMsgs, setSelectedMsgs]   = useState<string[]>([]);
+  const [selectMode, setSelectMode]       = useState(false);
 
   const [themeKey, setThemeKey] = useState<ThemeKey>(() => {
     if (typeof window === "undefined") return "aurora";
@@ -276,7 +276,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     ta.style.height = Math.min(ta.scrollHeight, 120) + "px";
   };
 
-  // ─── 1. Messages + Realtime ───────────────────────────────────────────────
   useEffect(() => {
     async function initChat() {
       const { data } = await supabase
@@ -324,7 +323,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     return () => { supabase.removeChannel(channel); };
   }, [supabase, userId]);
 
-  // ─── 2. Blue Tick (simple - mark all received messages as seen) ──────────
   useEffect(() => {
     const unseen = allMessages.filter((m) => m.user_id !== userId && !m.is_seen);
     if (unseen.length === 0) return;
@@ -336,7 +334,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
       .then(({ error }) => { if (error) console.error("Seen error:", error); });
   }, [allMessages, userId, supabase]);
 
-  // ─── 3. Online / Last Seen ────────────────────────────────────────────────
   useEffect(() => {
     const goOnline = async () => {
       const { data: ex } = await supabase.from("profiles").select("id").eq("id", userId).maybeSingle();
@@ -371,7 +368,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     };
   }, [userId, username, supabase]);
 
-  // ─── 4. Typing Broadcast ──────────────────────────────────────────────────
   useEffect(() => {
     const ch = supabase.channel("typing-v3", { config: { broadcast: { self: false, ack: false } } });
     ch.on("broadcast", { event: "typing" }, ({ payload }) => {
@@ -401,7 +397,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     typingTimeout.current = setTimeout(() => { isTypingRef.current = false; sendTypingSignal(false); }, 2000);
   }, [sendTypingSignal]);
 
-  // ─── 5. Scroll ────────────────────────────────────────────────────────────
   const handleScroll = useCallback(() => {
     const el = mainRef.current;
     if (!el) return;
@@ -415,7 +410,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     setUnreadCount(0); firstUnreadId.current = null; setIsAtBottom(true);
   };
 
-  // ─── 6. Send Message ──────────────────────────────────────────────────────
   const sendMessage = async () => {
     if (!draft.trim()) return;
     const text = draft.trim();
@@ -440,7 +434,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     }
   };
 
-  // ─── 7. File Select / Send ────────────────────────────────────────────────
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -496,7 +489,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     finally { setUploading(false); }
   };
 
-  // ─── 8. Delete ────────────────────────────────────────────────────────────
   const deleteForEveryone = async (id: string) => {
     const { error } = await supabase.from("messages").delete().eq("id", id);
     if (error) { alert("Delete error: " + error.message); return; }
@@ -512,7 +504,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     setDeleteModal(null);
   };
 
-  // ─── 9. Clear Chat ────────────────────────────────────────────────────────
   const clearChatForMe = async () => {
     const visible = allMessages.filter((m) => !(m.deleted_for || []).includes(userId));
     for (const m of visible) {
@@ -523,7 +514,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     setShowClearConfirm(false);
   };
 
-  // ─── 10. Jump to reply ────────────────────────────────────────────────────
   const jumpToMessage = useCallback((id: string) => {
     const bubble = document.getElementById(`bubble-${id}`);
     if (!bubble) return;
@@ -532,14 +522,12 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     setTimeout(() => setHighlightedId(null), 1500);
   }, []);
 
-  // ─── 11. Theme apply ──────────────────────────────────────────────────────
   const applyTheme = (key: ThemeKey) => {
     setThemeKey(key);
     localStorage.setItem("chat_theme", key);
     setShowThemePanel(false);
   };
 
-  // ─── 12. Helpers ──────────────────────────────────────────────────────────
   const formatLastSeen = (ts: string) => {
     if (!ts) return "pehle";
     const d = new Date(ts), now = new Date();
@@ -598,12 +586,11 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
 
   const handleTouchEnd = () => {
     clearLongPress();
-    // small delay so onClick doesn't fire right after long press activates selectMode
     setTimeout(() => { longPressTriggered.current = false; }, 100);
   };
 
   const toggleSelectMsg = (id: string) => {
-    if (longPressTriggered.current) return; // ignore toggle right after long press
+    if (longPressTriggered.current) return;
     setSelectedMsgs((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   };
 
@@ -630,7 +617,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     cancelSelection();
   };
 
-  // ─── 13. Render content ───────────────────────────────────────────────────
   const renderContent = (m: any) => {
     if (m.file_type === "image") return (
       <img src={m.file_url} alt={m.file_name} onClick={() => setFullscreenImg(m.file_url)}
@@ -657,7 +643,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     return <p className="text-[14px] leading-snug whitespace-pre-wrap break-words">{m.text}</p>;
   };
 
-  // ─── 14. Timeline ─────────────────────────────────────────────────────────
   const visibleMessages = allMessages.filter((m) => !(m.deleted_for || []).includes(userId));
   const timeline = visibleMessages.reduce((acc: any[], m: any, i: number, arr: any[]) => {
     const date = new Date(m.created_at).toDateString();
@@ -672,7 +657,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     return acc;
   }, []);
 
-  // ─── 15. Header subtitle ──────────────────────────────────────────────────
   const headerSubtitle = () => {
     if (othersTyping) return (
       <span className="text-[11px] flex items-center gap-1.5" style={{ color: t.accent }}>
@@ -713,37 +697,27 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
 
   return (
     <div className="flex h-[100dvh] flex-col relative overflow-hidden" style={{ background: t.bg, color: t.otherBubbleText }}>
-      
-      {/* ── Ambient background orbs ── */}
-      {!wallpaper && (
-        <>
-          <div className="pointer-events-none absolute inset-0 overflow-hidden z-0">
-            <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full blur-[80px] opacity-40"
-              style={{ background: t.orb1 }} />
-            <div className="absolute top-1/2 -right-40 w-[400px] h-[400px] rounded-full blur-[70px] opacity-35"
-              style={{ background: t.orb2 }} />
-            <div className="absolute -bottom-20 left-1/3 w-[350px] h-[350px] rounded-full blur-[60px] opacity-30"
-              style={{ background: t.orb3 }} />
-          </div>
-          {/* Subtle grid overlay */}
 
-        </>
+      {!wallpaper && (
+        <div className="pointer-events-none absolute inset-0 overflow-hidden z-0">
+          <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full blur-[80px] opacity-40"
+            style={{ background: t.orb1 }} />
+          <div className="absolute top-1/2 -right-40 w-[400px] h-[400px] rounded-full blur-[70px] opacity-35"
+            style={{ background: t.orb2 }} />
+          <div className="absolute -bottom-20 left-1/3 w-[350px] h-[350px] rounded-full blur-[60px] opacity-30"
+            style={{ background: t.orb3 }} />
+        </div>
       )}
 
-      {wallpaper && <div className="absolute inset-0 z-0" style={{ backgroundImage: `url('${wallpaper}')`, backgroundSize: "cover", backgroundPosition: "center" }}>
-        <div className="absolute inset-0 bg-black/45" />
-      </div>}
+      {wallpaper && (
+        <div className="absolute inset-0 z-0" style={{ backgroundImage: `url('${wallpaper}')`, backgroundSize: "cover", backgroundPosition: "center" }}>
+          <div className="absolute inset-0 bg-black/45" />
+        </div>
+      )}
 
-      {/* ── Header ── */}
       <header className="relative z-20 px-4 py-3 flex justify-between items-center shrink-0"
-        style={{
-          background: t.headerBg,
-          borderBottom: `1px solid ${t.border}`,
-          backdropFilter: "blur(12px)",
-          WebkitBackdropFilter: "blur(12px)",
-        }}>
+        style={{ background: t.headerBg, borderBottom: `1px solid ${t.border}`, backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }}>
         <div className="flex items-center gap-3">
-          {/* Logo mark */}
           <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
             style={{ background: t.accentSoft, border: `1px solid ${t.borderGlow}` }}>
             <span className="text-base">🔒</span>
@@ -751,12 +725,8 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
           <div className="flex flex-col gap-0.5">
             <h1 className="font-bold text-[15px] tracking-tight leading-tight" style={{
               background: `linear-gradient(90deg, ${t.accent}, ${t.accent2})`,
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-            }}>
-              Private Portal
-            </h1>
+              WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+            }}>Private Portal</h1>
             <div className="min-h-[14px] flex items-center">{headerSubtitle()}</div>
           </div>
         </div>
@@ -778,18 +748,13 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
         </div>
       </header>
 
-      {/* ── Messages ── */}
       <main ref={mainRef} onScroll={handleScroll} className="relative z-10 flex-1 overflow-y-auto px-4 pt-4 pb-36"
         style={{ scrollbarWidth: "thin", scrollbarColor: `${t.border} transparent` }}>
         {timeline.map((item: any) => {
           if (item.kind === "date") return (
             <div key={item.key} className="flex justify-center my-5">
               <span className="px-4 py-1.5 rounded-full text-[10px] font-semibold uppercase tracking-widest"
-                style={{
-                  background: t.dateBg,
-                  color: t.dateText,
-                  border: `1px solid ${t.border}`,
-                }}>
+                style={{ background: t.dateBg, color: t.dateText, border: `1px solid ${t.border}` }}>
                 {item.label}
               </span>
             </div>
@@ -813,7 +778,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
               )}
 
               <div className={`flex ${mine ? "justify-end" : "justify-start"} mb-2 group`}>
-                {/* Action buttons for others */}
                 {!mine && (
                   <div className="flex flex-col gap-1 mr-1.5 self-end mb-1 opacity-40 group-hover:opacity-100 transition-all duration-200">
                     <button onClick={() => { setReplyTo(m); textareaRef.current?.focus(); }}
@@ -821,19 +785,17 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                       style={{ background: t.surface, color: t.accent, border: `1px solid ${t.border}` }}>
                       <CornerUpLeft className="size-3.5" />
                     </button>
-                    <button onClick={(e) => { e.stopPropagation(); if(!selectMode) setSelectMode(true); toggleSelectMsg(m.id); }}
+                    <button onClick={(e) => { e.stopPropagation(); if (!selectMode) setSelectMode(true); toggleSelectMsg(m.id); }}
                       className="rounded-xl flex items-center justify-center active:scale-95 transition-all"
-                      style={{ background: selectedMsgs.includes(m.id) ? t.accent : t.surface, color: selectedMsgs.includes(m.id) ? '#fff' : t.dateText, border: `1px solid ${t.border}`, width: '36px', height: '36px' }}
-                      title="Select">
-                      <span className="text-base font-bold leading-none">{selectedMsgs.includes(m.id) ? '✓' : '☐'}</span>
+                      style={{ background: selectedMsgs.includes(m.id) ? t.accent : t.surface, color: selectedMsgs.includes(m.id) ? "#fff" : t.dateText, border: `1px solid ${t.border}`, width: "36px", height: "36px" }}>
+                      <span className="text-base font-bold leading-none">{selectedMsgs.includes(m.id) ? "✓" : "☐"}</span>
                     </button>
                   </div>
                 )}
 
                 <div className="flex flex-col gap-1 max-w-[82%]">
-                  <div
-                    id={`bubble-${m.id}`}
-                    onClick={(e) => { if (selectMode && !(e.target as HTMLElement).closest('button')) toggleSelectMsg(m.id); }}
+                  <div id={`bubble-${m.id}`}
+                    onClick={() => { if (selectMode) toggleSelectMsg(m.id); }}
                     className="rounded-2xl px-3.5 py-2.5 cursor-pointer select-none transition-all duration-300"
                     style={{
                       background: mine ? t.myBubble : t.otherBubble,
@@ -843,21 +805,17 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                       transform: isHighlighted ? "scale(1.02)" : "scale(1)",
                       boxShadow: selectedMsgs.includes(m.id)
                         ? `0 0 0 2.5px ${t.accent}, 0 8px 32px rgba(0,0,0,0.3)`
-                        : isHighlighted
-                        ? `0 0 0 2px ${t.accent}, 0 8px 32px rgba(0,0,0,0.3)`
+                        : isHighlighted ? `0 0 0 2px ${t.accent}, 0 8px 32px rgba(0,0,0,0.3)`
                         : "0 2px 12px rgba(0,0,0,0.2)",
                       opacity: selectMode && !selectedMsgs.includes(m.id) ? 0.6 : 1,
-                    }}
-                  >
+                    }}>
                     {!mine && (
                       <p className="text-[10px] font-black mb-1 uppercase tracking-wide" style={{ color: t.accent }}>
                         {m.username}
                       </p>
                     )}
-
                     {m.reply_to_id && (
-                      <div
-                        onClick={(e) => { e.stopPropagation(); jumpToMessage(m.reply_to_id); }}
+                      <div onClick={(e) => { e.stopPropagation(); jumpToMessage(m.reply_to_id); }}
                         className="mb-2 px-2.5 py-1.5 rounded-lg cursor-pointer transition-opacity active:opacity-60"
                         style={{ background: "rgba(0,0,0,0.22)", borderLeft: `3px solid ${t.accent}` }}>
                         <p className="text-[10px] font-bold mb-0.5" style={{ color: t.accent }}>
@@ -866,10 +824,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                         <p className="text-[11px] opacity-70 truncate max-w-[200px]">{m.reply_to_text}</p>
                       </div>
                     )}
-
                     {renderContent(m)}
-
-                    {/* Timestamp row */}
                     <div className="flex items-center justify-end gap-1.5 mt-1.5">
                       <span className="text-[9px] font-medium" style={{ color: t.time }}>
                         {new Date(m.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}
@@ -878,15 +833,12 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                         <>
                           {m.is_seen
                             ? <CheckCheck className="size-3.5" style={{ color: t.tickSeen }} />
-                            : <Check className="size-3" style={{ color: t.time }} />
-                          }
-                          {/* ── Info button for seen time ── */}
+                            : <Check className="size-3" style={{ color: t.time }} />}
                           <button
                             onClick={(e) => { e.stopPropagation(); e.preventDefault(); setInfoModal(m); }}
                             onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); setInfoModal(m); }}
                             className="opacity-60 hover:opacity-100 active:opacity-100 transition-opacity"
-                            title="Message info"
-                            style={{ color: t.time, padding: '8px', margin: '-6px' }}>
+                            style={{ color: t.time, padding: "8px", margin: "-6px" }}>
                             <Info className="size-4" />
                           </button>
                         </>
@@ -895,7 +847,6 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                   </div>
                 </div>
 
-                {/* Action buttons for mine */}
                 {mine && (
                   <div className="flex flex-col gap-1 ml-1.5 self-end mb-1 opacity-40 group-hover:opacity-100 transition-all duration-200">
                     <button onClick={() => { setReplyTo(m); textareaRef.current?.focus(); }}
@@ -903,11 +854,10 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                       style={{ background: t.surface, color: t.accent, border: `1px solid ${t.border}` }}>
                       <CornerUpLeft className="size-3.5" />
                     </button>
-                    <button onClick={() => { if(!selectMode) setSelectMode(true); toggleSelectMsg(m.id); }}
-                      className="p-2.5 rounded-xl hover:scale-105 flex items-center justify-center"
-                      style={{ background: selectedMsgs.includes(m.id) ? t.accent : t.surface, color: selectedMsgs.includes(m.id) ? '#fff' : t.dateText, border: `1px solid ${t.border}`, minWidth: '32px', minHeight: '32px' }}
-                      title="Select">
-                      <span className="text-[13px] font-bold leading-none">{selectedMsgs.includes(m.id) ? '✓' : '☐'}</span>
+                    <button onClick={(e) => { e.stopPropagation(); if (!selectMode) setSelectMode(true); toggleSelectMsg(m.id); }}
+                      className="rounded-xl flex items-center justify-center active:scale-95 transition-all"
+                      style={{ background: selectedMsgs.includes(m.id) ? t.accent : t.surface, color: selectedMsgs.includes(m.id) ? "#fff" : t.dateText, border: `1px solid ${t.border}`, width: "36px", height: "36px" }}>
+                      <span className="text-base font-bold leading-none">{selectedMsgs.includes(m.id) ? "✓" : "☐"}</span>
                     </button>
                   </div>
                 )}
@@ -918,24 +868,17 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
         <div ref={bottomRef} />
       </main>
 
-      {/* ── Unread badge ── */}
       {unreadCount > 0 && !isAtBottom && (
         <button onClick={scrollToBottom}
-          className="fixed bottom-28 right-4 z-40 rounded-full pl-3 pr-4 py-2.5 text-sm font-bold shadow-2xl flex items-center gap-2 transition-all hover:scale-105"
-          style={{
-            background: t.sendBtn,
-            color: "#fff",
-            boxShadow: `0 4px 24px ${t.myBubbleSolid}55`,
-          }}>
-          <span>↓</span>
-          <span>{unreadCount} naya</span>
+          className="fixed bottom-28 right-4 z-40 rounded-full pl-3 pr-4 py-2.5 text-sm font-bold shadow-2xl flex items-center gap-2"
+          style={{ background: t.sendBtn, color: "#fff" }}>
+          <span>↓</span><span>{unreadCount} naya</span>
         </button>
       )}
 
-      {/* ── File Preview Bar ── */}
       {selectedFile && (
         <div className="fixed bottom-[72px] left-0 right-0 p-3 z-40"
-          style={{ background: t.headerBg, borderTop: `1px solid ${t.border}`, backdropFilter: "blur(20px)" }}>
+          style={{ background: t.headerBg, borderTop: `1px solid ${t.border}` }}>
           <div className="mx-auto max-w-4xl flex items-center gap-3">
             {filePreview && selectedFile.type.startsWith("image/") && (
               <img src={filePreview} className="size-14 object-cover rounded-xl shrink-0" />
@@ -954,7 +897,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
               <X className="size-4" />
             </button>
             <button onClick={sendFile} disabled={uploading}
-              className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2 transition-all hover:scale-105"
+              className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-2"
               style={{ background: t.sendBtn, color: "#fff" }}>
               {uploading ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
               {uploading ? "Bhej raha..." : "Bhejo"}
@@ -963,17 +906,14 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
         </div>
       )}
 
-      {/* ── Multi-select Bar ── */}
       {selectMode && selectedMsgs.length > 0 && (
         <div className="fixed bottom-0 w-full z-[60] flex items-center justify-between px-4 py-4 gap-3"
-          style={{ background: t.surfaceSolid, borderTop: `2px solid ${t.accent}`, backdropFilter: "blur(20px)" }}>
+          style={{ background: t.surfaceSolid, borderTop: `2px solid ${t.accent}` }}>
           <button onClick={cancelSelection} className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium"
             style={{ background: t.surface, color: t.dateText, border: `1px solid ${t.border}` }}>
             <X className="size-4" /> Cancel
           </button>
-          <span className="text-sm font-bold" style={{ color: t.accent }}>
-            {selectedMsgs.length} selected
-          </span>
+          <span className="text-sm font-bold" style={{ color: t.accent }}>{selectedMsgs.length} selected</span>
           <div className="flex gap-2">
             <button onClick={() => deleteSelected(false)}
               className="px-3 py-2 rounded-xl text-sm font-medium"
@@ -991,9 +931,8 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
         </div>
       )}
 
-      {/* ── Footer ── */}
       <footer className="fixed bottom-0 w-full z-50"
-        style={{ background: t.headerBg, borderTop: `1px solid ${t.border}`, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}>
+        style={{ background: t.headerBg, borderTop: `1px solid ${t.border}`, backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }}>
         {replyTo && (
           <div className="flex items-center gap-2 px-4 pt-2.5 pb-1.5 mx-auto max-w-4xl"
             style={{ borderBottom: `1px solid ${t.border}` }}>
@@ -1006,9 +945,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
               </p>
               <p className="text-[11px] opacity-60 truncate">{replyTo.text || replyTo.file_name || "📎 File"}</p>
             </div>
-            <button onClick={() => setReplyTo(null)} style={{ color: t.dateText }}>
-              <X className="size-4" />
-            </button>
+            <button onClick={() => setReplyTo(null)} style={{ color: t.dateText }}><X className="size-4" /></button>
           </div>
         )}
         <div className="mx-auto flex max-w-4xl gap-2 items-end p-3">
@@ -1020,33 +957,18 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
             style={{ background: t.surface, color: t.dateText, border: `1px solid ${t.border}` }}>
             <Paperclip className="size-5" />
           </button>
-          <textarea
-            ref={textareaRef}
-            value={draft}
-            onChange={(e) => handleTyping(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && e.ctrlKey) { e.preventDefault(); selectedFile ? sendFile() : sendMessage(); } }}
-            placeholder="Type a message..."
-            rows={1}
-            className="flex-1 rounded-2xl px-4 py-2.5 outline-none text-sm resize-none overflow-hidden min-h-[42px] max-h-[120px] leading-relaxed placeholder-opacity-40"
-            style={{
-              background: t.inputBg,
-              color: t.otherBubbleText,
-              border: `1px solid ${t.border}`,
-              height: "42px",
-              backdropFilter: "blur(8px)",
-            }}
-          />
+          <textarea ref={textareaRef} value={draft} onChange={(e) => handleTyping(e.target.value)}
+            placeholder="Type a message..." rows={1}
+            className="flex-1 rounded-2xl px-4 py-2.5 outline-none text-sm resize-none overflow-hidden min-h-[42px] max-h-[120px] leading-relaxed"
+            style={{ background: t.inputBg, color: t.otherBubbleText, border: `1px solid ${t.border}`, height: "42px" }} />
           <button onClick={selectedFile ? sendFile : sendMessage} disabled={uploading || (!draft.trim() && !selectedFile)}
             className="p-2.5 rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 disabled:opacity-40 shrink-0 mb-0.5"
-            style={{ background: t.sendBtn, color: "#fff", boxShadow: `0 4px 16px ${t.myBubbleSolid}40` }}>
+            style={{ background: t.sendBtn, color: "#fff" }}>
             {uploading ? <Loader2 className="size-5 animate-spin" /> : <Send className="size-5" />}
           </button>
         </div>
       </footer>
 
-      {/* ══════════════════ MODALS ══════════════════ */}
-
-      {/* ── Message Info / Seen Time Modal ── */}
       {infoModal && (
         <div className="fixed inset-0 bg-black/75 z-[100] flex items-center justify-center px-6"
           onClick={() => setInfoModal(null)}>
@@ -1054,25 +976,18 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
             style={{ background: t.surfaceSolid, border: `1px solid ${t.border}`, maxWidth: "320px", margin: "0 auto" }}
             onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ background: t.accentSoft }}>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: t.accentSoft }}>
                 <Info className="size-5" style={{ color: t.accent }} />
               </div>
               <h2 className="font-bold text-base" style={{ color: t.otherBubbleText }}>Message Info</h2>
             </div>
-
-            {/* Sent time */}
             <div className="flex items-start gap-3 mb-3 p-3 rounded-xl" style={{ background: t.surface }}>
               <Clock className="size-4 shrink-0 mt-0.5" style={{ color: t.dateText }} />
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: t.dateText }}>Bheja gaya</p>
-                <p className="text-[13px] font-medium" style={{ color: t.otherBubbleText }}>
-                  {formatExactDateTime(infoModal.created_at) || "—"}
-                </p>
+                <p className="text-[13px] font-medium" style={{ color: t.otherBubbleText }}>{formatExactDateTime(infoModal.created_at) || "—"}</p>
               </div>
             </div>
-
-            {/* Seen time */}
             <div className="flex items-start gap-3 p-3 rounded-xl" style={{ background: t.surface }}>
               <CheckCheck className="size-4 shrink-0 mt-0.5" style={{ color: infoModal.is_seen ? t.tickSeen : t.dateText }} />
               <div>
@@ -1080,19 +995,14 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                   {infoModal.is_seen ? "Dekha gaya" : "Abhi nahi dekha"}
                 </p>
                 {infoModal.is_seen && infoModal.seen_at ? (
-                  <p className="text-[13px] font-medium" style={{ color: t.otherBubbleText }}>
-                    {formatExactDateTime(infoModal.seen_at)}
-                  </p>
+                  <p className="text-[13px] font-medium" style={{ color: t.otherBubbleText }}>{formatExactDateTime(infoModal.seen_at)}</p>
                 ) : (
-                  <p className="text-[12px]" style={{ color: t.dateText }}>
-                    {infoModal.is_seen ? "Seen time record nahi hua" : "Deliver hua, par seen nahi"}
-                  </p>
+                  <p className="text-[12px]" style={{ color: t.dateText }}>{infoModal.is_seen ? "Seen time record nahi hua" : "Deliver hua, par seen nahi"}</p>
                 )}
               </div>
             </div>
-
             <button onClick={() => setInfoModal(null)}
-              className="w-full mt-4 py-2.5 rounded-xl text-sm font-medium transition-all hover:opacity-90"
+              className="w-full mt-4 py-2.5 rounded-xl text-sm font-medium"
               style={{ background: t.accentSoft, color: t.accent, border: `1px solid ${t.accent}33` }}>
               Close
             </button>
@@ -1100,35 +1010,26 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
         </div>
       )}
 
-      {/* ── Theme Panel ── */}
       {showThemePanel && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-end justify-center"
-          onClick={() => setShowThemePanel(false)}
-          >
+          onClick={() => setShowThemePanel(false)}>
           <div className="rounded-t-3xl w-full max-w-lg p-5 pt-4"
             style={{ background: t.surfaceSolid, border: `1px solid ${t.border}`, borderBottom: "none" }}
             onClick={(e) => e.stopPropagation()}>
-            {/* Handle bar */}
             <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ background: t.border }} />
             <div className="flex justify-between items-center mb-5">
               <div>
                 <h2 className="font-bold text-base" style={{ color: t.otherBubbleText }}>Theme Chuno</h2>
                 <p className="text-[11px] mt-0.5" style={{ color: t.dateText }}>Apni pasand ka theme lagao</p>
               </div>
-              <button onClick={() => setShowThemePanel(false)} style={{ color: t.dateText }}>
-                <X className="size-5" />
-              </button>
+              <button onClick={() => setShowThemePanel(false)} style={{ color: t.dateText }}><X className="size-5" /></button>
             </div>
             <div className="grid grid-cols-3 gap-3">
               {(Object.entries(THEMES) as [ThemeKey, typeof THEMES[ThemeKey]][]).map(([key, th]) => (
                 <button key={key} onClick={() => applyTheme(key)}
                   className="flex flex-col items-center gap-2 p-2.5 rounded-2xl transition-all duration-200 hover:scale-105"
-                  style={{
-                    background: themeKey === key ? t.accentSoft : t.surface,
-                    border: `1.5px solid ${themeKey === key ? t.accent : t.border}`,
-                  }}>
-                  <div className="relative w-16 h-12 rounded-xl overflow-hidden shadow-lg"
-                    style={{ background: th.bg }}>
+                  style={{ background: themeKey === key ? t.accentSoft : t.surface, border: `1.5px solid ${themeKey === key ? t.accent : t.border}` }}>
+                  <div className="relative w-16 h-12 rounded-xl overflow-hidden shadow-lg" style={{ background: th.bg }}>
                     <div className="absolute inset-0 flex flex-col justify-end p-1.5 gap-1">
                       <div className="self-start h-4 rounded-lg px-1.5 flex items-center text-[7px] font-semibold"
                         style={{ background: th.otherBubble, color: th.otherBubbleText, maxWidth: "70%" }}>Hi!</div>
@@ -1141,9 +1042,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                     )}
                   </div>
                   <span className="text-[10px] font-semibold text-center leading-tight"
-                    style={{ color: themeKey === key ? t.accent : t.dateText }}>
-                    {th.name}
-                  </span>
+                    style={{ color: themeKey === key ? t.accent : t.dateText }}>{th.name}</span>
                 </button>
               ))}
             </div>
@@ -1151,33 +1050,23 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
         </div>
       )}
 
-      {/* ── Wallpaper Panel ── */}
       {showWallpaperPanel && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-end justify-center"
-          onClick={() => setShowWallpaperPanel(false)}
-          >
+          onClick={() => setShowWallpaperPanel(false)}>
           <div className="rounded-t-3xl w-full max-w-lg p-5 pt-4"
             style={{ background: t.surfaceSolid, border: `1px solid ${t.border}`, borderBottom: "none" }}
             onClick={(e) => e.stopPropagation()}>
             <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ background: t.border }} />
             <div className="flex justify-between items-center mb-4">
               <h2 className="font-bold text-base" style={{ color: t.otherBubbleText }}>Wallpaper Chuno</h2>
-              <button onClick={() => setShowWallpaperPanel(false)} style={{ color: t.dateText }}>
-                <X className="size-5" />
-              </button>
+              <button onClick={() => setShowWallpaperPanel(false)} style={{ color: t.dateText }}><X className="size-5" /></button>
             </div>
             <div className="grid grid-cols-3 gap-3 mb-4">
               {WALLPAPERS.map((w) => (
                 <button key={w.id} onClick={() => applyWallpaper(w.value)}
                   className="relative rounded-xl overflow-hidden h-20 transition-all duration-200 hover:scale-105"
-                  style={{
-                    background: w.value ? `url('${w.value}') center/cover` : t.bg,
-                    border: `2px solid ${wallpaper === w.value ? t.accent : "transparent"}`,
-                    transform: wallpaper === w.value ? "scale(0.95)" : "scale(1)",
-                  }}>
-                  <span className="absolute bottom-0 left-0 right-0 text-center text-[9px] text-white font-semibold bg-black/60 py-1">
-                    {w.label}
-                  </span>
+                  style={{ background: w.value ? `url('${w.value}') center/cover` : t.bg, border: `2px solid ${wallpaper === w.value ? t.accent : "transparent"}` }}>
+                  <span className="absolute bottom-0 left-0 right-0 text-center text-[9px] text-white font-semibold bg-black/60 py-1">{w.label}</span>
                   {wallpaper === w.value && (
                     <span className="absolute top-1 right-1 rounded-full w-4 h-4 flex items-center justify-center text-[9px] font-bold"
                       style={{ background: t.accent, color: t.accentText }}>✓</span>
@@ -1186,26 +1075,20 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
               ))}
             </div>
             <div className="flex gap-2">
-              <input value={customUrl} onChange={(e) => setCustomUrl(e.target.value)}
-                placeholder="Custom image URL..."
+              <input value={customUrl} onChange={(e) => setCustomUrl(e.target.value)} placeholder="Custom image URL..."
                 className="flex-1 rounded-xl px-3 py-2 text-sm outline-none"
                 style={{ background: t.inputBg, color: t.otherBubbleText, border: `1px solid ${t.border}` }} />
-              <button onClick={() => customUrl.trim() && applyWallpaper(customUrl.trim())}
-                disabled={!customUrl.trim()}
-                className="px-4 rounded-xl text-sm font-semibold disabled:opacity-40 transition-all hover:scale-105"
-                style={{ background: t.sendBtn, color: "#fff" }}>
-                Lagao
-              </button>
+              <button onClick={() => customUrl.trim() && applyWallpaper(customUrl.trim())} disabled={!customUrl.trim()}
+                className="px-4 rounded-xl text-sm font-semibold disabled:opacity-40"
+                style={{ background: t.sendBtn, color: "#fff" }}>Lagao</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Clear Chat ── */}
       {showClearConfirm && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center px-4"
-          onClick={() => setShowClearConfirm(false)}
-          >
+          onClick={() => setShowClearConfirm(false)}>
           <div className="rounded-2xl w-full max-w-sm p-6 shadow-2xl"
             style={{ background: t.surfaceSolid, border: `1px solid ${t.border}` }}
             onClick={(e) => e.stopPropagation()}>
@@ -1215,64 +1098,49 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
                 <Eraser className="size-7 text-red-400" />
               </div>
               <h2 className="font-bold text-lg" style={{ color: t.otherBubbleText }}>Chat Saaf Karo?</h2>
-              <p className="text-[13px] text-center" style={{ color: t.dateText }}>Sirf aapke liye saaf hogi। Dusre ke paas rahegi।</p>
+              <p className="text-[13px] text-center" style={{ color: t.dateText }}>Sirf aapke liye saaf hogi।</p>
             </div>
             <div className="flex gap-3">
               <button onClick={() => setShowClearConfirm(false)}
-                className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-80"
-                style={{ border: `1px solid ${t.border}`, color: t.dateText }}>
-                Cancel
-              </button>
+                className="flex-1 py-3 rounded-xl text-sm font-semibold"
+                style={{ border: `1px solid ${t.border}`, color: t.dateText }}>Cancel</button>
               <button onClick={clearChatForMe}
-                className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
-                style={{ background: "linear-gradient(135deg,#dc2626,#ef4444)", color: "#fff" }}>
-                Saaf Karo
-              </button>
+                className="flex-1 py-3 rounded-xl text-sm font-semibold"
+                style={{ background: "linear-gradient(135deg,#dc2626,#ef4444)", color: "#fff" }}>Saaf Karo</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Delete Modal ── */}
       {deleteModal && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-end justify-center pb-8"
-          onClick={() => setDeleteModal(null)}
-          >
+          onClick={() => setDeleteModal(null)}>
           <div className="rounded-2xl w-full max-w-sm mx-4 overflow-hidden shadow-2xl"
             style={{ background: t.surfaceSolid, border: `1px solid ${t.border}` }}
             onClick={(e) => e.stopPropagation()}>
             <p className="text-center text-[11px] font-bold uppercase tracking-widest py-3"
-              style={{ color: t.dateText, borderBottom: `1px solid ${t.border}` }}>
-              Message Delete Karo
-            </p>
+              style={{ color: t.dateText, borderBottom: `1px solid ${t.border}` }}>Message Delete Karo</p>
             {deleteModal.mine && (
               <button onClick={() => deleteForEveryone(deleteModal.id)}
-                className="w-full py-4 font-medium flex items-center justify-center gap-2 transition-colors hover:bg-red-500/10"
+                className="w-full py-4 font-medium flex items-center justify-center gap-2"
                 style={{ color: "#f87171", borderBottom: `1px solid ${t.border}` }}>
                 <Trash2 className="size-4" /> Sabke liye delete
               </button>
             )}
             <button onClick={() => deleteForMe(deleteModal.id)}
-              className="w-full py-4 transition-colors hover:bg-white/5"
+              className="w-full py-4"
               style={{ color: t.otherBubbleText, borderBottom: `1px solid ${t.border}` }}>
               Sirf mere liye delete
             </button>
-            <button onClick={() => setDeleteModal(null)}
-              className="w-full py-3 text-sm transition-colors hover:bg-white/5"
-              style={{ color: t.dateText }}>
-              Cancel
-            </button>
+            <button onClick={() => setDeleteModal(null)} className="w-full py-3 text-sm" style={{ color: t.dateText }}>Cancel</button>
           </div>
         </div>
       )}
 
-      {/* ── Fullscreen Image ── */}
       {fullscreenImg && (
-        <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center"
-          onClick={() => setFullscreenImg(null)}>
-          <button className="absolute top-4 right-4 p-2.5 rounded-xl transition-all hover:scale-105"
-            style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}
-            onClick={() => setFullscreenImg(null)}>
+        <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center" onClick={() => setFullscreenImg(null)}>
+          <button className="absolute top-4 right-4 p-2.5 rounded-xl"
+            style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} onClick={() => setFullscreenImg(null)}>
             <X className="size-5" />
           </button>
           <img src={fullscreenImg} className="max-w-[95vw] max-h-[90vh] object-contain rounded-2xl" />
