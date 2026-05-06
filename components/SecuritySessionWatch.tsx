@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useRef } from "react";
 
-export default function SecuritySessionWatch({ userId }: { userId?: string }) {
+export default function SecuritySessionWatch() {
   const signingOut = useRef(false);
   const filePickerOpen = useRef(false);
   const filePickerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -11,20 +11,19 @@ export default function SecuritySessionWatch({ userId }: { userId?: string }) {
   useEffect(() => {
     const supabase = createClient();
 
-    // userId directly use karo — auth.uid() pe depend mat karo
     const goOffline = async () => {
-      if (!userId) return;
-      await supabase
-        .from("profiles")
-        .update({ is_online: false, last_seen_at: new Date().toISOString() })
-        .eq("id", userId);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("profiles")
+          .update({ is_online: false, last_seen_at: new Date().toISOString() })
+          .eq("id", user.id);
+      }
     };
 
     const hardLogout = async () => {
       if (signingOut.current) return;
       if (filePickerOpen.current) return;
       signingOut.current = true;
-      // Pehle offline karo, phir signout
       await goOffline();
       await supabase.auth.signOut();
       window.location.replace("/login");
@@ -73,7 +72,7 @@ export default function SecuritySessionWatch({ userId }: { userId?: string }) {
       observer.disconnect();
       if (filePickerTimer.current) clearTimeout(filePickerTimer.current);
     };
-  }, [userId]);
+  }, []);
 
   return null;
 }
