@@ -14,8 +14,12 @@ export default function SecuritySessionWatch() {
     const goOffline = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        await supabase.from("profiles")
-          .update({ is_online: false, last_seen_at: new Date().toISOString() })
+        await supabase
+          .from("profiles")
+          .update({
+            is_online: false,
+            last_seen_at: new Date().toISOString(),
+          })
           .eq("id", user.id);
       }
     };
@@ -24,6 +28,7 @@ export default function SecuritySessionWatch() {
       if (signingOut.current) return;
       if (filePickerOpen.current) return;
       signingOut.current = true;
+      (window as any).__loggedOut = true;
       await goOffline();
       await supabase.auth.signOut();
       window.location.replace("/login");
@@ -41,7 +46,13 @@ export default function SecuritySessionWatch() {
       }
     };
 
-    const onPopState = () => { void hardLogout(); };
+    const onPopState = () => {
+      void hardLogout();
+    };
+
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) void hardLogout();
+    };
 
     const onFileInputClick = () => {
       filePickerOpen.current = true;
@@ -60,15 +71,18 @@ export default function SecuritySessionWatch() {
     };
 
     attachFileListeners();
+
     const observer = new MutationObserver(attachFileListeners);
     observer.observe(document.body, { childList: true, subtree: true });
 
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("popstate", onPopState);
+    window.addEventListener("pageshow", onPageShow as EventListener);
 
     return () => {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("popstate", onPopState);
+      window.removeEventListener("pageshow", onPageShow as EventListener);
       observer.disconnect();
       if (filePickerTimer.current) clearTimeout(filePickerTimer.current);
     };
