@@ -1,5 +1,4 @@
 import ChatRoom from "@/components/ChatRoom";
-import SecuritySessionWatch from "@/components/SecuritySessionWatch";
 import { resolveChatUsername } from "@/lib/resolve-chat-username";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
@@ -15,12 +14,9 @@ export default async function PortalPage() {
   }
 
   return (
-    <>
-      <SecuritySessionWatch />
-      <ChatRoom
-        userId={user.id}
-        username={resolveChatUsername(user)}
-      />
-    </>
+    <ChatRoom
+      userId={user.id}
+      username={resolveChatUsername(user)}
+    />
   );
 }
