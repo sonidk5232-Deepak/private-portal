@@ -323,6 +323,30 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
 
     return () => { supabase.removeChannel(channel); };
   }, [supabase, userId]);
+// ─── Polling fallback — har 5 second mein naye msgs check karo ──────────
+useEffect(() => {
+  const interval = setInterval(async () => {
+    if ((window as any).__loggedOut) return;
+    const { data } = await supabase
+      .from("messages")
+      .select("*")
+      .order("created_at", { ascending: true });
+    if (data) {
+      setAllMessages((prev) => {
+        const newMsgs = data.filter(
+          (d: any) => !prev.find((p) => p.id === d.id)
+        );
+        if (newMsgs.length === 0) return prev;
+        return [...prev, ...newMsgs].sort(
+          (a, b) =>
+            new Date(a.created_at).getTime() -
+            new Date(b.created_at).getTime()
+        );
+      });
+    }
+  }, 5000);
+  return () => clearInterval(interval);
+}, [supabase]);
 
   // ─── 2. Blue Tick (mark seen) — LOGOUT CHECK ADDED ───────────────────────
   useEffect(() => {

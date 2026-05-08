@@ -1,12 +1,12 @@
 "use client";
-
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useRef } from "react";
 
 export default function SecuritySessionWatch() {
-  const signingOut = useRef(false);
-  const filePickerOpen = useRef(false);
+  const signingOut      = useRef(false);
+  const filePickerOpen  = useRef(false);
   const filePickerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const logoutTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -14,12 +14,8 @@ export default function SecuritySessionWatch() {
     const goOffline = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        await supabase
-          .from("profiles")
-          .update({
-            is_online: false,
-            last_seen_at: new Date().toISOString(),
-          })
+        await supabase.from("profiles")
+          .update({ is_online: false, last_seen_at: new Date().toISOString() })
           .eq("id", user.id);
       }
     };
@@ -36,19 +32,22 @@ export default function SecuritySessionWatch() {
 
     const onVisibility = () => {
       if (document.visibilityState === "hidden") {
-        void hardLogout();
+        // 5 second grace period — brief switch pe logout nahi
+        logoutTimer.current = setTimeout(() => {
+          void hardLogout();
+        }, 5000);
       } else {
-        filePickerOpen.current = false;
-        if (filePickerTimer.current) {
-          clearTimeout(filePickerTimer.current);
-          filePickerTimer.current = null;
+        // Wapas aaya — logout cancel karo
+        if (logoutTimer.current) {
+          clearTimeout(logoutTimer.current);
+          logoutTimer.current = null;
         }
+        signingOut.current = false;
+        filePickerOpen.current = false;
       }
     };
 
-    const onPopState = () => {
-      void hardLogout();
-    };
+    const onPopState = () => void hardLogout();
 
     const onPageShow = (e: PageTransitionEvent) => {
       if (e.persisted) void hardLogout();
@@ -71,7 +70,6 @@ export default function SecuritySessionWatch() {
     };
 
     attachFileListeners();
-
     const observer = new MutationObserver(attachFileListeners);
     observer.observe(document.body, { childList: true, subtree: true });
 
@@ -80,6 +78,7 @@ export default function SecuritySessionWatch() {
     window.addEventListener("pageshow", onPageShow as EventListener);
 
     return () => {
+      if (logoutTimer.current) clearTimeout(logoutTimer.current);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("popstate", onPopState);
       window.removeEventListener("pageshow", onPageShow as EventListener);
