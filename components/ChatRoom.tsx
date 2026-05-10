@@ -268,6 +268,9 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
     const interval = setInterval(() => setLastSeenTimer((t) => t + 1), 30000);
     return () => clearInterval(interval);
   }, []);
+  useEffect(() => {
+  setTimeout(() => textareaRef.current?.focus(), 500);
+}, []);
 
   const autoResize = () => {
     const ta = textareaRef.current;
@@ -947,6 +950,30 @@ useEffect(() => {
             </div>
           );
         })}
+        {othersTyping && (
+          <div className="flex justify-start mb-2 px-1">
+            <div className="rounded-2xl px-4 py-3"
+              style={{
+                background: t.otherBubble,
+                borderRadius: "4px 18px 18px 18px",
+                border: `1px solid ${t.border}`,
+                backdropFilter: "blur(16px)",
+              }}>
+              <div className="flex gap-1.5 items-end h-5">
+                {[0, 150, 300].map((delay) => (
+                  <span key={delay}
+                    className="w-2.5 h-2.5 rounded-full animate-bounce block"
+                    style={{
+                      backgroundColor: t.accent,
+                      animationDelay: `${delay}ms`,
+                      animationDuration: "0.9s",
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
         <div ref={bottomRef} />
       </main>
 
