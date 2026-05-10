@@ -5,7 +5,7 @@ import {
   Check, CheckCheck, Loader2, LogOut,
   Paperclip, Send, X, FileText, Download,
   Trash2, Image as ImageIcon, Reply, CornerUpLeft,
-  Eraser, Palette, Info, Clock
+  Eraser, Palette, Info, Clock, Mic, MicOff
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 
@@ -251,7 +251,11 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
   const [customUrl, setCustomUrl] = useState("");
 
   const t = THEMES[themeKey];
-
+const [isRecording, setIsRecording]     = useState(false);
+const [recordingTime, setRecordingTime] = useState(0);
+const mediaRecorderRef  = useRef<MediaRecorder | null>(null);
+const audioChunksRef    = useRef<Blob[]>([]);
+const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const bottomRef        = useRef<HTMLDivElement>(null);
   const firstUnreadRef   = useRef<HTMLDivElement>(null);
   const mainRef          = useRef<HTMLDivElement>(null);
@@ -451,6 +455,87 @@ useEffect(() => {
   };
 
   // ─── 6. Send Message ──────────────────────────────────────────────────────
+  const startRecording = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const recorder = new MediaRecorder(stream);
+    audioChunksRef.current = [];
+
+    recorder.ondataavailable = (e) => {
+      audioChunksRef.current.push(e.data);
+    };
+
+    recorder.onstop = async () => {
+      const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+      const audioFile = new File([audioBlob], `voice_${Date.now()}.webm`, { type: "audio/webm" });
+      stream.getTracks().forEach((t) => t.stop());
+
+      setUploading(true);
+      try {
+        const filePath = `${userId}/${Date.now()}.webm`;
+        const { error: upErr } = await supabase.storage.from("chat-files").upload(filePath, audioFile);
+        if (upErr) throw upErr;
+        const { data: urlData } = await supabase.storage.from("chat-files").createSignedUrl(filePath, 60 * 60 * 24 * 365);
+        const msgData: any = {
+          user_id: userId, username,
+          text: "🎤 Voice message",
+          file_url: urlData?.signedUrl,
+          file_type: "audio",
+          file_name: audioFile.name,
+          file_size: audioFile.size,
+          is_seen: false, seen_at: null, deleted_for: [],
+        };
+        const { data, error } = await supabase.from("messages").insert([msgData]).select();
+        if (error) throw error;
+        if (data) {
+          setAllMessages((prev) => {
+            if (prev.find((m) => m.id === data[0].id)) return prev;
+            return [...prev, data[0]];
+          });
+          setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+        }
+      } catch (err: any) {
+        alert("Voice message error: " + err.message);
+      } finally {
+        setUploading(false);
+      }
+    };
+
+    recorder.start();
+    mediaRecorderRef.current = recorder;
+    setIsRecording(true);
+    setRecordingTime(0);
+    recordingTimerRef.current = setInterval(() => setRecordingTime((t) => t + 1), 1000);
+  } catch (_) {
+    alert("Microphone ka access do — browser settings mein allow karo!");
+  }
+};
+
+const stopRecording = () => {
+  if (mediaRecorderRef.current && isRecording) {
+    mediaRecorderRef.current.stop();
+    setIsRecording(false);
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    setRecordingTime(0);
+  }
+};
+
+const cancelRecording = () => {
+  if (mediaRecorderRef.current) {
+    mediaRecorderRef.current.ondataavailable = null;
+    mediaRecorderRef.current.onstop = null;
+    mediaRecorderRef.current.stop();
+  }
+  setIsRecording(false);
+  if (recordingTimerRef.current) {
+    clearInterval(recordingTimerRef.current);
+    recordingTimerRef.current = null;
+  }
+  setRecordingTime(0);
+};
   const sendMessage = async () => {
     if (!draft.trim()) return;
     const text = draft.trim();
@@ -1071,6 +1156,30 @@ useEffect(() => {
           </div>
         )}
         <div className="mx-auto flex max-w-4xl gap-2 items-end p-3">
+        {isRecording && (
+            <div className="flex items-center gap-3 px-1 py-2 w-full"
+              style={{ borderBottom: `1px solid ${t.border}` }}>
+              <div className="flex gap-1.5 items-center">
+                {[0, 150, 300].map((d) => (
+                  <span key={d} className="w-2 h-2 rounded-full animate-bounce"
+                    style={{ backgroundColor: "#ef4444", animationDelay: `${d}ms` }} />
+                ))}
+              </div>
+              <span className="text-sm font-medium flex-1" style={{ color: "#ef4444" }}>
+                Recording... {recordingTime}s
+              </span>
+              <button onClick={cancelRecording}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold"
+                style={{ background: t.surface, color: t.dateText, border: `1px solid ${t.border}` }}>
+                Cancel
+              </button>
+              <button onClick={stopRecording}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold"
+                style={{ background: "linear-gradient(135deg,#dc2626,#ef4444)", color: "#fff" }}>
+                Send ✓
+              </button>
+            </div>
+          )}
           <input ref={fileInputRef} type="file"
             accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
             onChange={handleFileSelect} className="hidden" />
@@ -1078,6 +1187,22 @@ useEffect(() => {
             className="p-2.5 rounded-xl shrink-0 mb-0.5 transition-all hover:scale-105 active:scale-95"
             style={{ background: t.surface, color: t.dateText, border: `1px solid ${t.border}` }}>
             <Paperclip className="size-5" />
+          </button>
+          <button onClick={() => fileInputRef.current?.click()}
+            className="p-2.5 rounded-xl shrink-0 mb-0.5 transition-all hover:scale-105 active:scale-95"
+            style={{ background: t.surface, color: t.dateText, border: `1px solid ${t.border}` }}>
+            <Paperclip className="size-5" />
+          </button>
+
+          {/* ← YEH NEW MIC BUTTON ADD KARO */}
+          <button onClick={isRecording ? stopRecording : startRecording}
+            className="p-2.5 rounded-xl shrink-0 mb-0.5 transition-all hover:scale-105 active:scale-95"
+            style={{
+              background: isRecording ? "rgba(239,68,68,0.15)" : t.surface,
+              color: isRecording ? "#ef4444" : t.dateText,
+              border: `1px solid ${isRecording ? "#ef4444" : t.border}`,
+            }}>
+            {isRecording ? <MicOff className="size-5" /> : <Mic className="size-5" />}
           </button>
           <textarea
             ref={textareaRef}
