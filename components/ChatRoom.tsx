@@ -332,7 +332,24 @@ useEffect(() => {
       .select("*")
       .order("created_at", { ascending: true });
     if (data) {
-      setAllMessages(data); // Poora data refresh — seen bhi update hoga
+      setAllMessages((prev) => {
+        const newMsgs = data.filter(
+          (d: any) => !prev.find((p) => p.id === d.id)
+        );
+        if (newMsgs.length > 0) {
+          setIsAtBottom((atBottom) => {
+            if (atBottom) {
+              setTimeout(() =>
+                bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50
+              );
+            } else {
+              setUnreadCount((c) => c + newMsgs.length);
+            }
+            return atBottom;
+          });
+        }
+        return data;
+      });
     }
   }, 2000);
   return () => clearInterval(interval);
