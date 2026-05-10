@@ -323,7 +323,7 @@ export default function ChatRoom({ userId, username }: { userId: string; usernam
 
     return () => { supabase.removeChannel(channel); };
   }, [supabase, userId]);
-// ─── Polling fallback — har 5 second mein naye msgs check karo ──────────
+// ─── Polling fallback ─────────────────────────────────────────────────────
 useEffect(() => {
   const interval = setInterval(async () => {
     if ((window as any).__loggedOut) return;
@@ -332,17 +332,7 @@ useEffect(() => {
       .select("*")
       .order("created_at", { ascending: true });
     if (data) {
-      setAllMessages((prev) => {
-        const newMsgs = data.filter(
-          (d: any) => !prev.find((p) => p.id === d.id)
-        );
-        if (newMsgs.length === 0) return prev;
-        return [...prev, ...newMsgs].sort(
-          (a, b) =>
-            new Date(a.created_at).getTime() -
-            new Date(b.created_at).getTime()
-        );
-      });
+      setAllMessages(data); // Poora data refresh — seen bhi update hoga
     }
   }, 2000);
   return () => clearInterval(interval);
