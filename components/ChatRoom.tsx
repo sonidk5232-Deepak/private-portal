@@ -340,25 +340,23 @@ useEffect(() => {
       .order("created_at", { ascending: true });
     if (data) {
       setAllMessages((prev) => {
-        const newMsgs = data.filter(
-          (d: any) => !prev.find((p) => p.id === d.id)
-        );
+        const newMsgs = data.filter((d: any) => !prev.find((p) => p.id === d.id));
+        const seenChanged = data.some((d: any) => {
+          const ex = prev.find((p) => p.id === d.id);
+          return ex && ex.is_seen !== d.is_seen;
+        });
+        if (newMsgs.length === 0 && !seenChanged) return prev;
         if (newMsgs.length > 0) {
           setIsAtBottom((atBottom) => {
-            if (atBottom) {
-              setTimeout(() =>
-                bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50
-              );
-            } else {
-              setUnreadCount((c) => c + newMsgs.length);
-            }
+            if (atBottom) setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+            else setUnreadCount((c) => c + newMsgs.length);
             return atBottom;
           });
         }
         return data;
       });
     }
-  }, 2000);
+  }, 4000);
   return () => clearInterval(interval);
 }, [supabase]);
 
@@ -1155,77 +1153,47 @@ const cancelRecording = () => {
             </button>
           </div>
         )}
-        <div className="mx-auto flex max-w-4xl gap-2 items-end p-3">
-        {isRecording && (
-            <div className="flex items-center gap-3 px-1 py-2 w-full"
-              style={{ borderBottom: `1px solid ${t.border}` }}>
-              <div className="flex gap-1.5 items-center">
-                {[0, 150, 300].map((d) => (
-                  <span key={d} className="w-2 h-2 rounded-full animate-bounce"
-                    style={{ backgroundColor: "#ef4444", animationDelay: `${d}ms` }} />
-                ))}
-              </div>
-              <span className="text-sm font-medium flex-1" style={{ color: "#ef4444" }}>
-                Recording... {recordingTime}s
-              </span>
-              <button onClick={cancelRecording}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold"
-                style={{ background: t.surface, color: t.dateText, border: `1px solid ${t.border}` }}>
-                Cancel
-              </button>
-              <button onClick={stopRecording}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold"
-                style={{ background: "linear-gradient(135deg,#dc2626,#ef4444)", color: "#fff" }}>
-                Send ✓
-              </button>
-            </div>
-          )}
-          <input ref={fileInputRef} type="file"
-            accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
-            onChange={handleFileSelect} className="hidden" />
-          <button onClick={() => fileInputRef.current?.click()}
-            className="p-2.5 rounded-xl shrink-0 mb-0.5 transition-all hover:scale-105 active:scale-95"
-            style={{ background: t.surface, color: t.dateText, border: `1px solid ${t.border}` }}>
-            <Paperclip className="size-5" />
-          </button>
-          <button onClick={() => fileInputRef.current?.click()}
-            className="p-2.5 rounded-xl shrink-0 mb-0.5 transition-all hover:scale-105 active:scale-95"
-            style={{ background: t.surface, color: t.dateText, border: `1px solid ${t.border}` }}>
-            <Paperclip className="size-5" />
-          </button>
-
-          {/* ← YEH NEW MIC BUTTON ADD KARO */}
-          <button onClick={isRecording ? stopRecording : startRecording}
-            className="p-2.5 rounded-xl shrink-0 mb-0.5 transition-all hover:scale-105 active:scale-95"
-            style={{
-              background: isRecording ? "rgba(239,68,68,0.15)" : t.surface,
-              color: isRecording ? "#ef4444" : t.dateText,
-              border: `1px solid ${isRecording ? "#ef4444" : t.border}`,
-            }}>
-            {isRecording ? <MicOff className="size-5" /> : <Mic className="size-5" />}
-          </button>
-          <textarea
-            ref={textareaRef}
-            value={draft}
-            onChange={(e) => handleTyping(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && e.ctrlKey) { e.preventDefault(); selectedFile ? sendFile() : sendMessage(); } }}
-            placeholder="Type a message..."
-            rows={1}
-            className="flex-1 rounded-2xl px-4 py-2.5 outline-none text-sm resize-none overflow-hidden min-h-[42px] max-h-[120px] leading-relaxed placeholder-opacity-40"
-            style={{
-              background: t.inputBg,
-              color: t.otherBubbleText,
-              border: `1px solid ${t.border}`,
-              height: "42px",
-              backdropFilter: "blur(8px)",
-            }}
-          />
-          <button onClick={selectedFile ? sendFile : sendMessage} disabled={uploading || (!draft.trim() && !selectedFile)}
-            className="p-2.5 rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 disabled:opacity-40 shrink-0 mb-0.5"
-            style={{ background: t.sendBtn, color: "#fff", boxShadow: `0 4px 16px ${t.myBubbleSolid}40` }}>
-            {uploading ? <Loader2 className="size-5 animate-spin" /> : <Send className="size-5" />}
-          </button>
-        </div>
+<div className="mx-auto flex max-w-4xl gap-2 items-end p-3">
+  <input ref={fileInputRef} type="file"
+    accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
+    onChange={handleFileSelect} className="hidden" />
+  <button onClick={() => fileInputRef.current?.click()}
+    className="p-2.5 rounded-xl shrink-0 mb-0.5 transition-all hover:scale-105 active:scale-95"
+    style={{ background: t.surface, color: t.dateText, border: `1px solid ${t.border}` }}>
+    <Paperclip className="size-5" />
+  </button>
+  <button onClick={isRecording ? stopRecording : startRecording}
+    className="p-2.5 rounded-xl shrink-0 mb-0.5 transition-all hover:scale-105 active:scale-95"
+    style={{
+      background: isRecording ? "rgba(239,68,68,0.15)" : t.surface,
+      color: isRecording ? "#ef4444" : t.dateText,
+      border: `1px solid ${isRecording ? "#ef4444" : t.border}`,
+    }}>
+    {isRecording ? <MicOff className="size-5" /> : <Mic className="size-5" />}
+  </button>
+  <textarea
+    ref={textareaRef}
+    value={draft}
+    onChange={(e) => handleTyping(e.target.value)}
+    onKeyDown={(e) => { if (e.key === "Enter" && e.ctrlKey) { e.preventDefault(); selectedFile ? sendFile() : sendMessage(); } }}
+    placeholder="Type a message..."
+    rows={1}
+    className="flex-1 rounded-2xl px-4 py-2.5 outline-none text-sm resize-none overflow-hidden min-h-[42px] max-h-[120px] leading-relaxed placeholder-opacity-40"
+    style={{
+      background: t.inputBg,
+      color: t.otherBubbleText,
+      border: `1px solid ${t.border}`,
+      height: "42px",
+      backdropFilter: "blur(8px)",
+    }}
+  />
+  <button onClick={selectedFile ? sendFile : sendMessage}
+    disabled={uploading || (!draft.trim() && !selectedFile)}
+    className="p-2.5 rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 disabled:opacity-40 shrink-0 mb-0.5"
+    style={{ background: t.sendBtn, color: "#fff", boxShadow: `0 4px 16px ${t.myBubbleSolid}40` }}>
+    {uploading ? <Loader2 className="size-5 animate-spin" /> : <Send className="size-5" />}
+  </button>
+</div>
       </footer>
 
       {/* ══════════════════ MODALS ══════════════════ */}
