@@ -267,11 +267,15 @@ const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isTypingRef      = useRef(false);
   const typingChRef      = useRef<any>(null);
   const firstUnreadId    = useRef<string | null>(null);
+  const allMessagesRef = useRef<any[]>([]);
 
   useEffect(() => {
     const interval = setInterval(() => setLastSeenTimer((t) => t + 1), 30000);
     return () => clearInterval(interval);
   }, []);
+  useEffect(() => {
+  allMessagesRef.current = allMessages;
+}, [allMessages]);
   useEffect(() => {
   setTimeout(() => textareaRef.current?.focus(), 500);
 }, []);
@@ -334,31 +338,68 @@ const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 useEffect(() => {
   const interval = setInterval(async () => {
     if ((window as any).__loggedOut) return;
-    const { data } = await supabase
+
+    const prev     = allMessagesRef.current;
+    const lastMsg  = prev[prev.length - 1];
+    const lastTs   = lastMsg?.created_at || new Date(0).toISOString();
+    const unseenIds = prev
+      .filter((m) => m.user_id === userId && !m.is_seen)
+      .map((m) => m.id);
+
+    // Sirf naye messages fetch karo
+    const { data: newData } = await supabase
       .from("messages")
       .select("*")
+      .gte("created_at", lastTs)
       .order("created_at", { ascending: true });
-    if (data) {
-      setAllMessages((prev) => {
-        const newMsgs = data.filter((d: any) => !prev.find((p) => p.id === d.id));
-        const seenChanged = data.some((d: any) => {
-          const ex = prev.find((p) => p.id === d.id);
-          return ex && ex.is_seen !== d.is_seen;
-        });
-        if (newMsgs.length === 0 && !seenChanged) return prev;
-        if (newMsgs.length > 0) {
-          setIsAtBottom((atBottom) => {
-            if (atBottom) setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
-            else setUnreadCount((c) => c + newMsgs.length);
-            return atBottom;
-          });
-        }
-        return data;
-      });
+
+    // Sirf unseen messages ka seen status check karo
+    let seenData: any[] = [];
+    if (unseenIds.length > 0) {
+      const { data } = await supabase
+        .from("messages")
+        .select("id, is_seen, seen_at")
+        .in("id", unseenIds);
+      seenData = data || [];
     }
-  }, 4000);
+
+    setAllMessages((current) => {
+      let changed = false;
+
+      // Seen status update
+      let updated = current.map((m) => {
+        const s = seenData.find((sd) => sd.id === m.id);
+        if (s && s.is_seen && !m.is_seen) {
+          changed = true;
+          return { ...m, is_seen: true, seen_at: s.seen_at };
+        }
+        return m;
+      });
+
+      // Naye messages add karo
+      const newMsgs = (newData || []).filter(
+        (d) => !current.find((m) => m.id === d.id)
+      );
+      if (newMsgs.length > 0) {
+        changed = true;
+        updated = [...updated, ...newMsgs];
+        setIsAtBottom((atBottom) => {
+          if (atBottom)
+            setTimeout(
+              () => bottomRef.current?.scrollIntoView({ behavior: "smooth" }),
+              50
+            );
+          else setUnreadCount((c) => c + newMsgs.length);
+          return atBottom;
+        });
+      }
+
+      return changed ? updated : current;
+    });
+  }, 3000);
+
   return () => clearInterval(interval);
-}, [supabase]);
+}, [supabase, userId]);
 
   // ─── 2. Blue Tick (mark seen) — LOGOUT CHECK ADDED ───────────────────────
   useEffect(() => {
