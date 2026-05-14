@@ -514,7 +514,7 @@ useEffect(() => {
         const filePath = `${userId}/${Date.now()}.webm`;
         const { error: upErr } = await supabase.storage.from("chat-files").upload(filePath, audioFile);
         if (upErr) throw upErr;
-        const { data: urlData } = await supabase.storage.from("chat-files").createSignedUrl(filePath, 60 * 60 * 24 * 365);
+        const { data: urlData } = await supabase.storage.from("chat-files").createSignedUrl(filePath, 60 * 60 * 24 * 2);
         const msgData: any = {
           user_id: userId, username,
           text: "🎤 Voice message",
@@ -628,7 +628,7 @@ const cancelRecording = () => {
 
       const { error: upErr } = await supabase.storage.from("chat-files").upload(filePath, selectedFile);
       if (upErr) throw upErr;
-      const { data: urlData } = await supabase.storage.from("chat-files").createSignedUrl(filePath, 60 * 60 * 24 * 365);
+      const { data: urlData } = await supabase.storage.from("chat-files").createSignedUrl(filePath, 60 * 60 * 24 * 2);
 
       const msgData: any = {
         user_id: userId, username, text: selectedFile.name,
