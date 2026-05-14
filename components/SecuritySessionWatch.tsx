@@ -7,6 +7,7 @@ export default function SecuritySessionWatch() {
   const signingOut      = useRef(false);
   const filePickerOpen  = useRef(false);
   const filePickerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -97,6 +98,23 @@ export default function SecuritySessionWatch() {
       });
     };
 
+    // ─── 5 Minute Inactivity Logout ──────────────────────────────────────────
+const FIVE_MIN = 5 * 60 * 1000;
+
+const resetInactivity = () => {
+  if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+  inactivityTimer.current = setTimeout(() => {
+    void hardLogout();
+  }, FIVE_MIN);
+};
+
+const activityEvents = [
+  "mousedown", "mousemove", "keypress",
+  "scroll", "touchstart", "click"
+];
+activityEvents.forEach((ev) => window.addEventListener(ev, resetInactivity));
+resetInactivity(); // Timer shuru karo
+
     attachFileListeners();
     const observer = new MutationObserver(attachFileListeners);
     observer.observe(document.body, { childList: true, subtree: true });
@@ -106,6 +124,8 @@ export default function SecuritySessionWatch() {
     window.addEventListener("pageshow",  onPageShow as EventListener);
 
     return () => {
+      activityEvents.forEach((ev) => window.removeEventListener(ev, resetInactivity));
+if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("popstate",  onPopState);
       window.removeEventListener("pageshow",  onPageShow as EventListener);

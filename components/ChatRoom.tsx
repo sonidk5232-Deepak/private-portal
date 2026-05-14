@@ -268,11 +268,47 @@ const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const typingChRef      = useRef<any>(null);
   const firstUnreadId    = useRef<string | null>(null);
   const allMessagesRef = useRef<any[]>([]);
+  const mySessionToken = useRef(
+  Math.random().toString(36).substring(2) + Date.now().toString()
+);
 
   useEffect(() => {
     const interval = setInterval(() => setLastSeenTimer((t) => t + 1), 30000);
     return () => clearInterval(interval);
   }, []);
+  // ─── Single Device Login Check ────────────────────────────────────────────
+useEffect(() => {
+  // Is device ka session token save karo
+  supabase.from("profiles")
+    .update({ session_token: mySessionToken.current })
+    .eq("id", userId)
+    .then(() => {});
+
+  // Har 10 second mein check karo
+  const sessionCheck = setInterval(async () => {
+    if ((window as any).__loggedOut) return;
+    const { data } = await supabase
+      .from("profiles")
+      .select("session_token")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (data && data.session_token !== mySessionToken.current) {
+      // Doosre device pe login hua — yahan logout karo
+      (window as any).__loggedOut = true;
+      document.body.style.visibility = "hidden";
+      const veil = document.createElement("div");
+      Object.assign(veil.style, {
+        position: "fixed", inset: "0", background: "#000", zIndex: "999999",
+      });
+      document.documentElement.appendChild(veil);
+      await supabase.auth.signOut();
+      window.location.replace("about:blank");
+    }
+  }, 10000);
+
+  return () => clearInterval(sessionCheck);
+}, [supabase, userId]);
   useEffect(() => {
   allMessagesRef.current = allMessages;
 }, [allMessages]);
