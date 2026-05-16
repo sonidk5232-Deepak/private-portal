@@ -70,19 +70,43 @@ export default function LoginForm() {
     };
   }, []);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      setError("Invalid credentials. Access denied.");
-      setLoading(false);
-    } else {
-  router.push("/");
-router.refresh();
+ const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  setError("");
+
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    setError("Invalid credentials. Access denied.");
+    setLoading(false);
+  } else {
+    // MAHAKAL flag check karo
+    const action = sessionStorage.getItem("ingress_action");
+    sessionStorage.removeItem("ingress_action");
+
+    if (action === "MAHAKAL" && data.user) {
+      // Login ke baad chat clear karo
+      const userId = data.user.id;
+      const { data: msgs } = await supabase
+        .from("messages")
+        .select("id, deleted_for")
+        .not("deleted_for", "cs", `{${userId}}`);
+      if (msgs) {
+        for (const m of msgs) {
+          const updated = [...(m.deleted_for || []), userId];
+          await supabase
+            .from("messages")
+            .update({ deleted_for: updated })
+            .eq("id", m.id);
+        }
+      }
     }
-  };
+
+    router.push("/portal"); // Hamesha chat pe jao after login
+    router.refresh();
+  }
+};
 
   return (
     <div className="relative min-h-screen overflow-hidden flex items-center justify-center"

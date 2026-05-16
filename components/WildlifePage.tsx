@@ -134,59 +134,57 @@ export default function WildlifePage() {
     if (ingressOpen) setTimeout(() => codeRef.current?.focus(), 100);
   }, [ingressOpen]);
 
- const handleIngress = async () => {
-    setCodeLoading(true);
-    setCodeError("");
-    const upperCode = code.trim().toUpperCase();
+const handleIngress = async () => {
+  setCodeLoading(true);
+  setCodeError("");
+  const enteredCode = code.trim(); // NO toUpperCase — exact match
 
-    if (upperCode === "BHAWANI") {
-      // Check if already logged in
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      // Logged in → chat, not logged in → login page
-      router.push(session ? "/portal" : "/login");
+  if (enteredCode === "BHAWANI") {
+    const { createClient } = await import("@/lib/supabase/client");
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      router.push("/portal"); // Logged in → seedha chat
+    } else {
+      sessionStorage.removeItem("ingress_action");
+      router.push("/login"); // Not logged in → login page
+    }
 
-    } else if (upperCode === "MAHAKAL") {
-      // Clear chat for current user
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
+  } else if (enteredCode === "MAHAKAL") {
+    const { createClient } = await import("@/lib/supabase/client");
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
 
-      if (!session) {
-        setCodeError("MAHAKAL ke liye pehle login karein.");
-        setCodeLoading(false);
-        return;
-      }
-
+    if (session) {
+      // Already logged in → turant chat clear karo
       const userId = session.user.id;
-      // Fetch all messages
       const { data: msgs } = await supabase
         .from("messages")
         .select("id, deleted_for")
         .not("deleted_for", "cs", `{${userId}}`);
-
-      if (msgs && msgs.length > 0) {
+      if (msgs) {
         for (const m of msgs) {
           const updated = [...(m.deleted_for || []), userId];
-          await supabase
-            .from("messages")
-            .update({ deleted_for: updated })
-            .eq("id", m.id);
+          await supabase.from("messages").update({ deleted_for: updated }).eq("id", m.id);
         }
       }
       setCode("");
-      setCodeError("✅ Aapki poori chat saaf ho gayi!");
+      setCodeError("✅ Chat saaf ho gayi! BHAWANI se chat mein jao.");
       setCodeLoading(false);
-
     } else {
-      setTimeout(() => {
-        setCodeError("Galat pratham — Prapti niraakrit.");
-        setCode("");
-        setCodeLoading(false);
-      }, 800);
+      // Not logged in → flag lagao, login pe bhejo
+      sessionStorage.setItem("ingress_action", "MAHAKAL");
+      router.push("/login");
     }
-  };
+
+  } else {
+    setTimeout(() => {
+      setCodeError("Galat pratham — Prapti niraakrit.");
+      setCode("");
+      setCodeLoading(false);
+    }, 600);
+  }
+};
 
   return (
     <div style={{ background: t.bg, color: t.text, minHeight: "100vh", transition: "all 0.4s" }}>
