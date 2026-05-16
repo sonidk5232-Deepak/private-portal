@@ -134,18 +134,58 @@ export default function WildlifePage() {
     if (ingressOpen) setTimeout(() => codeRef.current?.focus(), 100);
   }, [ingressOpen]);
 
-  const handleIngress = () => {
+ const handleIngress = async () => {
     setCodeLoading(true);
     setCodeError("");
-    setTimeout(() => {
-      if (code.trim().toUpperCase() === "BHAWANI") {
-        router.push("/login");
-      } else {
+    const upperCode = code.trim().toUpperCase();
+
+    if (upperCode === "BHAWANI") {
+      // Check if already logged in
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      // Logged in → chat, not logged in → login page
+      router.push(session ? "/portal" : "/login");
+
+    } else if (upperCode === "MAHAKAL") {
+      // Clear chat for current user
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        setCodeError("MAHAKAL ke liye pehle login karein.");
+        setCodeLoading(false);
+        return;
+      }
+
+      const userId = session.user.id;
+      // Fetch all messages
+      const { data: msgs } = await supabase
+        .from("messages")
+        .select("id, deleted_for")
+        .not("deleted_for", "cs", `{${userId}}`);
+
+      if (msgs && msgs.length > 0) {
+        for (const m of msgs) {
+          const updated = [...(m.deleted_for || []), userId];
+          await supabase
+            .from("messages")
+            .update({ deleted_for: updated })
+            .eq("id", m.id);
+        }
+      }
+      setCode("");
+      setCodeError("✅ Aapki poori chat saaf ho gayi!");
+      setCodeLoading(false);
+
+    } else {
+      setTimeout(() => {
         setCodeError("Galat pratham — Prapti niraakrit.");
         setCode("");
         setCodeLoading(false);
-      }
-    }, 800);
+      }, 800);
+    }
   };
 
   return (
