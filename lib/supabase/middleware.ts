@@ -8,39 +8,31 @@ function copyCookies(from: NextResponse, to: NextResponse) {
 }
 
 export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
-  });
+  let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
+        getAll() { return request.cookies.getAll(); },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value),
+            request.cookies.set(name, value)
           );
-          supabaseResponse = NextResponse.next({
-            request,
-          });
+          supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options),
+            supabaseResponse.cookies.set(name, value, options)
           );
         },
       },
-    },
+    }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const { data: { user } } = await supabase.auth.getUser();
   const path = request.nextUrl.pathname;
 
+  // /portal sirf logged-in users ke liye
   if (path.startsWith("/portal") && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
@@ -49,29 +41,16 @@ export async function updateSession(request: NextRequest) {
     return redirect;
   }
 
+  // Agar logged-in hai aur /login pe aaya → wildlife page bhejo
   if (path === "/login" && user) {
     const url = request.nextUrl.clone();
-    url.pathname = "/portal";
+    url.pathname = "/";
     const redirect = NextResponse.redirect(url);
     copyCookies(supabaseResponse, redirect);
     return redirect;
   }
 
-  if (path === "/" && user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/portal";
-    const redirect = NextResponse.redirect(url);
-    copyCookies(supabaseResponse, redirect);
-    return redirect;
-  }
-
-  if (path === "/" && !user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    const redirect = NextResponse.redirect(url);
-    copyCookies(supabaseResponse, redirect);
-    return redirect;
-  }
-
+  // / aur /login ke liye koi forced redirect nahi
+  // Wildlife page sabko dikhega
   return supabaseResponse;
 }
