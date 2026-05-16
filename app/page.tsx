@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import WildlifePage from "@/components/WildlifePage";
 
 export default function Home() {
-  redirect("/login");
+  return <WildlifePage />;
 }
