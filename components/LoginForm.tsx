@@ -79,8 +79,8 @@ export default function LoginForm() {
       setError("Invalid credentials. Access denied.");
       setLoading(false);
     } else {
-      router.push("/portal");
-      router.refresh();
+  router.push("/");
+router.refresh();
     }
   };
 
