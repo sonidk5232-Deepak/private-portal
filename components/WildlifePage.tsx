@@ -4,8 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 const THEMES = {
-  harit: {
-    name: "Harit",
+  forest: {
+    name: "Forest",
     bg: "#030d05",
     bgCard: "rgba(5,28,10,0.85)",
     text: "#d1fae5",
@@ -17,8 +17,8 @@ const THEMES = {
     menuBg: "rgba(3,14,6,0.97)",
     hero: "linear-gradient(160deg,#020c04 0%,#042010 60%,#021505 100%)",
   },
-  raat: {
-    name: "Raat",
+  night: {
+    name: "Night",
     bg: "#050508",
     bgCard: "rgba(10,10,18,0.85)",
     text: "#e0e7ff",
@@ -30,8 +30,8 @@ const THEMES = {
     menuBg: "rgba(5,5,12,0.97)",
     hero: "linear-gradient(160deg,#040408 0%,#0d0d2b 60%,#050514 100%)",
   },
-  ujala: {
-    name: "Ujala",
+  light: {
+    name: "Light",
     bg: "#f0fdf4",
     bgCard: "rgba(255,255,255,0.85)",
     text: "#14532d",
@@ -48,81 +48,81 @@ type ThemeKey = keyof typeof THEMES;
 
 const sections = [
   {
-    id: "kyun",
+    id: "forests",
     icon: "🌳",
-    title: "Jangal Kyun Zaruri Hain?",
+    title: "Why Are Forests Essential?",
     content: [
-      "Jangal prithvi ke phephde hain. Dharti ki lagbhag 31% bhoomi par failay huay yeh vaano ka parivar, hamare jeevan ka aadhar hai. Bina janngalon ke, jeevan ki kalpana bhi sambhav nahi.",
-      "Duniya ke 80% thi sthaliya jeev-jantu janngalon mein niwas karte hain. Yeh woh jagah hai jahan prakriti apna sabse sundar roop dikhati hai — jahaan ek patte ki sarsarahat se lekar sher ki dahad tak, sab kuch ek mahaan symphony mein band hai.",
-      "Bharat mein lagbhag 7.12 lakh varg kilometre kshetrfal mein jangal failay hue hain, jo desh ki kul bhoomi ka lagbhag 21.71% hai. Yeh jangal 500 se adhik prajaatiyon ke parindon, 200+ prajaatiyon ke saanpon aur hazaron keedon-makodon ka ghar hai.",
+      "Forests are the lungs of the Earth. Covering approximately 31% of the planet's land surface, this vast family of trees and ecosystems forms the very foundation of life as we know it. Without forests, life itself would be unimaginable.",
+      "About 80% of the world's terrestrial species — animals, plants, and insects — call forests their home. It is here that nature reveals its most magnificent form, where the rustling of a single leaf and the roar of a tiger together compose one grand symphony of life.",
+      "India's forests span approximately 7.12 lakh square kilometres, covering about 21.71% of the country's total land area. These forests shelter over 500 species of birds, more than 200 species of reptiles, and thousands of insects and invertebrates.",
     ],
   },
   {
-    id: "labh",
+    id: "benefits",
     icon: "💚",
-    title: "Jangalon ke Anmol Labh",
+    title: "The Priceless Benefits of Forests",
     items: [
-      { icon: "💧", head: "Jal Chakra", body: "Jangal barish ko aakarshit karte hain, bhoojal ko recharge karte hain aur nadiyon ko saal bhar pravaahit rakhte hain. Ek paripakvv ped pratidin 400 litre paani waashpeekarit karta hai." },
-      { icon: "🌬️", head: "Shuddh Vayu", body: "Ek akela ped ek saal mein 100 kg carbon dioxide absorb karta hai aur itni oxygen deta hai ki 4 log saans le sakein. Jangal hawa ko filter karke hamare liye shuddh oxygen pradaan karte hain." },
-      { icon: "🌡️", head: "Jalvayu Niyantran", body: "Vaano ki upasthiti temperature ko 2-8 degree Celsius tak thanda rakh sakti hai. Yeh praakritik air conditioning hai jo sampoorn pariyavarana tantra ko santulit rakhti hai." },
-      { icon: "🦁", head: "Jeev Vividhata", body: "Jangal biodiversity ke khajanay hain. Yahan ek choti si jagah mein aise hazaron jeev milte hain jo dharti ke aur kisi bhi kone mein nahi paay jate." },
-      { icon: "🌿", head: "Aushadhi Bhandaar", body: "Bharat ke jangalon mein 45,000 se adhik prajaatiyon ke paudhe paay jate hain jinmein se kai hajaaron aushadheey guNon se bharpoor hain. Yeh praakritik dawakhana hai." },
-      { icon: "🏔️", head: "Bhoomi Sanrakshan", body: "Jangal bhoomi aparan rokate hain, baadhon ko niyantrit karte hain aur pahadi sthalonpada mein bhooklhan se suraksha pradaan karte hain." },
+      { icon: "💧", head: "Water Cycle", body: "Forests attract rainfall, recharge groundwater, and keep rivers flowing year-round. A single mature tree transpires up to 400 litres of water every day, sustaining entire watersheds." },
+      { icon: "🌬️", head: "Clean Air", body: "One tree absorbs about 100 kg of carbon dioxide per year and produces enough oxygen for four people to breathe. Forests act as giant air filters, continuously purifying the atmosphere." },
+      { icon: "🌡️", head: "Climate Regulation", body: "The presence of forests can lower temperatures by 2–8°C. They serve as natural air conditioning, balancing the entire ecosystem and buffering against extreme weather events." },
+      { icon: "🦁", head: "Biodiversity", body: "Forests are treasure troves of biodiversity. Within a small patch of forest, thousands of species thrive that exist nowhere else on Earth — each one irreplaceable." },
+      { icon: "🌿", head: "Medicinal Wealth", body: "India's forests harbour over 45,000 plant species, thousands of which possess proven medicinal properties. These living pharmacies have sustained human health for millennia." },
+      { icon: "🏔️", head: "Soil Protection", body: "Forests prevent soil erosion, control floods, and protect mountain regions from devastating landslides, securing both land and livelihoods for millions of people." },
     ],
   },
   {
-    id: "prakriti",
+    id: "nature",
     icon: "🦋",
-    title: "Prakriti Ki Madadgaar Shakti",
+    title: "Nature's Remarkable Power",
     content: [
-      "Prakriti ka apna ek sucharu tantra hai jo lakho varshon mein viksit hua hai. Har jeev-jantu, har ped-paudha is tantra ka ek avashyak hissa hai. Ek bhi prani ya paudhe ki prajaati ka vinaash is pure tantra ko prabhavit karta hai.",
-      "Bagh ek sheershsthi shikari hai jo pure jungle ke ecosystem ko santulit rakhta hai. Agar bagh na ho to hirnon ki sankhya atyadhik badh jaayegi jo ghaans aur poudho ko kha jayenge, jis se jungle nashtho jaayega. Yeh ek chain reaction hai jise 'Trophic Cascade' kehte hain.",
-      "Titliyan aur makkhiyaan phoolon ka parag ek phool se doosre phool tak lejaati hain — is kriya ko 'paragan' kehte hain. Bina paragan ke 75% se adhik khadya faslein prajaanan nahi kar sakti. Ek chhoti si titali ka mahatva iss tarah sampurn manav jeevan se judaa hai.",
+      "Nature has developed its own intricate system over millions of years. Every creature, every plant is an indispensable part of this grand mechanism. The extinction of even a single species can set off a chain reaction that disrupts the entire system.",
+      "The tiger is an apex predator that keeps the entire jungle ecosystem in balance. Without tigers, deer populations would surge unchecked, devouring vegetation and ultimately destroying the forest itself. This chain reaction is known as a 'Trophic Cascade' — a powerful reminder of how every species matters.",
+      "Butterflies and bees carry pollen from flower to flower — a process called 'pollination.' Without pollination, more than 75% of the world's food crops would fail to reproduce. The humble butterfly, therefore, is intimately connected to all of human civilisation.",
     ],
     stats: [
-      { num: "80%", label: "Khadya faslein paragnkartaaon par nirbhar" },
-      { num: "1.6 Bn", label: "Log jangalon se jeevika kamaate hain" },
-      { num: "50%", label: "Vanspatiyon ki prajaatiyaan sirf jangalon mein" },
-      { num: "2.6 Tn", label: "Tonne carbon jangal saalaana absorb karte hain" },
+      { num: "80%", label: "Food crops depend on pollinators" },
+      { num: "1.6 Bn", label: "People earn livelihoods from forests" },
+      { num: "50%", label: "Plant species found only in forests" },
+      { num: "2.6 Tn", label: "Tonnes of carbon absorbed annually" },
     ],
   },
   {
-    id: "india",
+    id: "wildlife",
     icon: "🐯",
-    title: "Bharat Ka Vanya Vaibhav",
+    title: "India's Wildlife Heritage",
     animals: [
-      { name: "Bengal Sher", sci: "Panthera tigris tigris", count: "~3,167", status: "Sankatgrastha", icon: "🐯", desc: "Bharat ka rashtriya pashu. Project Tiger ke tahat inki sankhya mein uplabdhi praapthuv aayi hai." },
-      { name: "Ek Singa Gainda", sci: "Rhinoceros unicornis", count: "~3,700", status: "Sanrakshit", icon: "🦏", desc: "Assam ka garv — Kaziranga mein duniya ki sabse adhik awaadhik gainde paaye jaate hain." },
-      { name: "Asiatic Haathi", sci: "Elephas maximus", count: "~27,000", status: "Sankatgrastha", icon: "🐘", desc: "Jangal ka architect — yeh aapne raaste banate hain jo chhote jaanwaron ke liye bhi upyogi hote hain." },
-      { name: "Snow Cheetah", sci: "Panthera uncia", count: "~700", status: "Savdhan", icon: "🐆", desc: "Himalay ka anmol ratan — pahadi paryaavarana tantra ka raja." },
-      { name: "Gangetic Dolphin", sci: "Platanista gangetica", count: "~3,700", status: "Sankatgrastha", icon: "🐬", desc: "Ganga nadi ki shuddhata ka maapnndand — yeh sirf shuddh paani mein jeeti hai." },
-      { name: "Indian Vulture", sci: "Gyps indicus", count: "Ghata hua", status: "Atigangrast", icon: "🦅", desc: "Prakriti ka safaayi karmachaari — binaa iske beemar pashuo ke shav saadne lagte." },
+      { name: "Bengal Tiger", sci: "Panthera tigris tigris", count: "~3,167", status: "Endangered", icon: "🐯", desc: "India's national animal. Under Project Tiger, their numbers have shown a remarkable recovery over the past four decades." },
+      { name: "One-Horned Rhinoceros", sci: "Rhinoceros unicornis", count: "~3,700", status: "Protected", icon: "🦏", desc: "The pride of Assam — Kaziranga National Park is home to the world's highest concentration of one-horned rhinos." },
+      { name: "Asiatic Elephant", sci: "Elephas maximus", count: "~27,000", status: "Endangered", icon: "🐘", desc: "The architect of the jungle — elephants create trails and clearings that benefit dozens of other species in the ecosystem." },
+      { name: "Snow Leopard", sci: "Panthera uncia", count: "~700", status: "Vulnerable", icon: "🐆", desc: "The jewel of the Himalayas — the supreme ruler of high-altitude mountain ecosystems, shrouded in mystery and grace." },
+      { name: "Gangetic Dolphin", sci: "Platanista gangetica", count: "~3,700", status: "Endangered", icon: "🐬", desc: "A living indicator of the Ganga's health — these dolphins survive only in clean, unpolluted river waters." },
+      { name: "Indian Vulture", sci: "Gyps indicus", count: "Declining", status: "Critically Endangered", icon: "🦅", desc: "Nature's essential clean-up crew — without vultures, carcasses of sick animals accumulate and spread disease." },
     ],
   },
   {
-    id: "sanrakshan",
+    id: "conservation",
     icon: "🛡️",
-    title: "Van Sanrakshan — Hamaari Zimmedaari",
+    title: "Forest Conservation — Our Responsibility",
     steps: [
-      { num: "01", title: "Ped Lagao, Jeevan Bachao", desc: "Ek ped lagana ek jeevan denay ke barabar hai. Apne janam divas par, shaadi ki saalgirah par — ped lagaao." },
-      { num: "02", title: "Kaagaz Bachao", desc: "Ek tonne kaagaz banane mein 17 ped katate hain. Digital documents ka upyog karein, kaagaz bachain aur jangal bachaaon." },
-      { num: "03", title: "Vaanya Jeevon Ki Suraksha", desc: "Vaanya jeevon ka shikar, unka byaapaar — yeh aparaadh hai. Kisi bhi sandehajanak gatividhi ki suchna 1800-11-0030 par dein." },
-      { num: "04", title: "Eco-Tourism", desc: "Jangal mein jaayen — shuddh mann se, kachra khatam karke. Prakriti se judne se uski suraksha ka sankalp prabal hota hai." },
+      { num: "01", title: "Plant Trees, Save Lives", desc: "Planting a tree is equivalent to giving a life. Make it a tradition — plant a tree on your birthday, anniversary, or any occasion worth celebrating." },
+      { num: "02", title: "Save Paper, Save Forests", desc: "Producing one tonne of paper requires cutting down 17 trees. Opt for digital documents wherever possible, and help preserve our forests one sheet at a time." },
+      { num: "03", title: "Protect Wildlife", desc: "Hunting and trading wildlife is a serious crime. Report any suspicious activity to the wildlife helpline: 1800-11-0030." },
+      { num: "04", title: "Embrace Eco-Tourism", desc: "Visit forests with a clean heart and leave no trace behind. Connecting with nature strengthens our resolve to protect it for future generations." },
     ],
   },
 ];
 
 export default function WildlifePage() {
-  const [theme, setTheme]           = useState<ThemeKey>("harit");
-  const [menuOpen, setMenuOpen]     = useState(false);
+  const [theme, setTheme]             = useState<ThemeKey>("forest");
+  const [menuOpen, setMenuOpen]       = useState(false);
   const [ingressOpen, setIngressOpen] = useState(false);
-  const [code, setCode]             = useState("");
-  const [codeError, setCodeError]   = useState("");
+  const [code, setCode]               = useState("");
+  const [codeError, setCodeError]     = useState("");
   const [codeLoading, setCodeLoading] = useState(false);
-  const [scrolled, setScrolled]     = useState(false);
-  const router                      = useRouter();
-  const t                           = THEMES[theme];
-  const codeRef                     = useRef<HTMLInputElement>(null);
+  const [scrolled, setScrolled]       = useState(false);
+  const router                        = useRouter();
+  const t                             = THEMES[theme];
+  const codeRef                       = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -134,57 +134,55 @@ export default function WildlifePage() {
     if (ingressOpen) setTimeout(() => codeRef.current?.focus(), 100);
   }, [ingressOpen]);
 
-const handleIngress = async () => {
-  setCodeLoading(true);
-  setCodeError("");
-  const enteredCode = code.trim(); // NO toUpperCase — exact match
+  const handleIngress = async () => {
+    setCodeLoading(true);
+    setCodeError("");
+    const enteredCode = code.trim();
 
-  if (enteredCode === "BHAWANI") {
-    const { createClient } = await import("@/lib/supabase/client");
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      router.push("/portal"); // Logged in → seedha chat
-    } else {
-      sessionStorage.removeItem("ingress_action");
-      router.push("/login"); // Not logged in → login page
-    }
-
-  } else if (enteredCode === "MAHAKAL") {
-    const { createClient } = await import("@/lib/supabase/client");
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (session) {
-      // Already logged in → turant chat clear karo
-      const userId = session.user.id;
-      const { data: msgs } = await supabase
-        .from("messages")
-        .select("id, deleted_for")
-        .not("deleted_for", "cs", `{${userId}}`);
-      if (msgs) {
-        for (const m of msgs) {
-          const updated = [...(m.deleted_for || []), userId];
-          await supabase.from("messages").update({ deleted_for: updated }).eq("id", m.id);
-        }
+    if (enteredCode === "BHAWANI") {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        router.push("/portal");
+      } else {
+        sessionStorage.removeItem("ingress_action");
+        router.push("/login");
       }
-      setCode("");
-      setCodeError("✅ Chat saaf ho gayi! BHAWANI se chat mein jao.");
-      setCodeLoading(false);
-    } else {
-      // Not logged in → flag lagao, login pe bhejo
-      sessionStorage.setItem("ingress_action", "MAHAKAL");
-      router.push("/login");
-    }
 
-  } else {
-    setTimeout(() => {
-      setCodeError("Galat pratham — Prapti niraakrit.");
-      setCode("");
-      setCodeLoading(false);
-    }, 600);
-  }
-};
+    } else if (enteredCode === "MAHAKAL") {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session) {
+        const userId = session.user.id;
+        const { data: msgs } = await supabase
+          .from("messages")
+          .select("id, deleted_for")
+          .not("deleted_for", "cs", `{${userId}}`);
+        if (msgs) {
+          for (const m of msgs) {
+            const updated = [...(m.deleted_for || []), userId];
+            await supabase.from("messages").update({ deleted_for: updated }).eq("id", m.id);
+          }
+        }
+        setCode("");
+        setCodeError("✅ Your chat has been cleared. Use BHAWANI to enter.");
+        setCodeLoading(false);
+      } else {
+        sessionStorage.setItem("ingress_action", "MAHAKAL");
+        router.push("/login");
+      }
+
+    } else {
+      setTimeout(() => {
+        setCodeError("Access denied — invalid access key.");
+        setCode("");
+        setCodeLoading(false);
+      }, 600);
+    }
+  };
 
   return (
     <div style={{ background: t.bg, color: t.text, minHeight: "100vh", transition: "all 0.4s" }}>
@@ -198,26 +196,22 @@ const handleIngress = async () => {
         transition: "all 0.3s",
       }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 24px", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          {/* Logo */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 22 }}>🌿</span>
             <div>
               <div style={{ fontWeight: 800, fontSize: 15, letterSpacing: "-0.3px", color: t.accent }}>neowildrepository</div>
-              <div style={{ fontSize: 9, letterSpacing: "0.15em", color: t.textMuted, textTransform: "uppercase" }}>Van Vigyan Pranali</div>
+              <div style={{ fontSize: 9, letterSpacing: "0.15em", color: t.textMuted, textTransform: "uppercase" }}>Forest Science Portal</div>
             </div>
           </div>
-
-          {/* Nav */}
           <nav style={{ display: "flex", gap: 24, alignItems: "center" }}>
-            {["Jangal","Labh","Jeev-Jantu","Sanrakshan"].map(n => (
-              <a key={n} href={`#${n.toLowerCase()}`}
+            {[["Forests","#forests"],["Benefits","#benefits"],["Wildlife","#wildlife"],["Conservation","#conservation"]].map(([n,href]) => (
+              <a key={n} href={href}
                 style={{ fontSize: 13, color: t.textMuted, textDecoration: "none", transition: "color 0.2s" }}
                 onMouseOver={e => (e.currentTarget.style.color = t.accent)}
                 onMouseOut={e => (e.currentTarget.style.color = t.textMuted)}>
                 {n}
               </a>
             ))}
-            {/* Menu trigger */}
             <button onClick={() => setMenuOpen(true)}
               style={{ width: 36, height: 36, borderRadius: 10, border: `1px solid ${t.border}`, background: t.accentSoft, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 4 }}>
               {[0,1,2].map(i => <span key={i} style={{ width: 14, height: 1.5, background: t.accent, display: "block", borderRadius: 2 }} />)}
@@ -231,15 +225,15 @@ const handleIngress = async () => {
         <div style={{ maxWidth: 700, margin: "0 auto" }}>
           <div style={{ fontSize: 56, marginBottom: 16, filter: "drop-shadow(0 0 20px rgba(34,197,94,0.3))" }}>🌲🦁🌿</div>
           <h1 style={{ fontSize: "clamp(28px,5vw,48px)", fontWeight: 900, lineHeight: 1.15, marginBottom: 20, color: t.text }}>
-            Prakriti ki Raksha,<br />
-            <span style={{ color: t.accent }}>Manav ki Suraksha</span>
+            Protect Nature,<br />
+            <span style={{ color: t.accent }}>Secure Humanity</span>
           </h1>
           <p style={{ fontSize: 16, lineHeight: 1.8, color: t.textMuted, maxWidth: 560, margin: "0 auto 36px" }}>
-            Rashtriya Van Vigyan Evam Paryaavaran Suchna Pranali — Bharat ke samast vaano, vaanya praaniyon
-            aur jaivik vividhata ki sampoorn jaankaari ka ek adbhut sanklan.
+            National Forest Science & Environmental Information System — a comprehensive repository of India's forests,
+            wildlife, and biodiversity for researchers, conservationists, and nature lovers.
           </p>
           <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
-            {[["🌳","7.12 Lakh km²","Jangali Kshetra"],["🐯","3,167+","Bengal Sher"],["🌿","45,000+","Vanaspati Prajaatiyaan"]].map(([icon,num,label]) => (
+            {[["🌳","7.12 Lakh km²","Forest Cover"],["🐯","3,167+","Bengal Tigers"],["🌿","45,000+","Plant Species"]].map(([icon,num,label]) => (
               <div key={label} style={{ background: t.bgCard, border: `1px solid ${t.border}`, borderRadius: 16, padding: "16px 24px", backdropFilter: "blur(12px)" }}>
                 <div style={{ fontSize: 22, marginBottom: 4 }}>{icon}</div>
                 <div style={{ fontSize: 20, fontWeight: 800, color: t.accent }}>{num}</div>
@@ -253,8 +247,8 @@ const handleIngress = async () => {
       {/* ── Sections ── */}
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 24px" }}>
 
-        {/* Jangal kyun zaruri */}
-        <section id="jangal" style={{ padding: "72px 0 48px" }}>
+        {/* Why Forests */}
+        <section id="forests" style={{ padding: "72px 0 48px" }}>
           <SectionHead icon={sections[0].icon} title={sections[0].title} t={t} />
           <div style={{ display: "flex", flexDirection: "column", gap: 20, marginTop: 32 }}>
             {sections[0].content!.map((para, i) => (
@@ -265,8 +259,8 @@ const handleIngress = async () => {
           </div>
         </section>
 
-        {/* Labh */}
-        <section id="labh" style={{ padding: "48px 0" }}>
+        {/* Benefits */}
+        <section id="benefits" style={{ padding: "48px 0" }}>
           <SectionHead icon={sections[1].icon} title={sections[1].title} t={t} />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: 16, marginTop: 32 }}>
             {sections[1].items!.map((item) => (
@@ -281,8 +275,8 @@ const handleIngress = async () => {
           </div>
         </section>
 
-        {/* Prakriti */}
-        <section id="prakriti" style={{ padding: "48px 0" }}>
+        {/* Nature's Power */}
+        <section id="nature" style={{ padding: "48px 0" }}>
           <SectionHead icon={sections[2].icon} title={sections[2].title} t={t} />
           <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 32 }}>
             {sections[2].content!.map((para, i) => (
@@ -291,7 +285,6 @@ const handleIngress = async () => {
               </div>
             ))}
           </div>
-          {/* Stats */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12, marginTop: 24 }}>
             {sections[2].stats!.map(s => (
               <div key={s.label} style={{ background: t.accentSoft, border: `1px solid ${t.border}`, borderRadius: 14, padding: "20px 16px", textAlign: "center" }}>
@@ -302,8 +295,8 @@ const handleIngress = async () => {
           </div>
         </section>
 
-        {/* Animals */}
-        <section id="jeev-jantu" style={{ padding: "48px 0" }}>
+        {/* Wildlife */}
+        <section id="wildlife" style={{ padding: "48px 0" }}>
           <SectionHead icon={sections[3].icon} title={sections[3].title} t={t} />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: 16, marginTop: 32 }}>
             {sections[3].animals!.map(a => (
@@ -325,13 +318,13 @@ const handleIngress = async () => {
           </div>
         </section>
 
-        {/* Sanrakshan */}
-        <section id="sanrakshan" style={{ padding: "48px 0 80px" }}>
+        {/* Conservation */}
+        <section id="conservation" style={{ padding: "48px 0 80px" }}>
           <SectionHead icon={sections[4].icon} title={sections[4].title} t={t} />
           <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 32 }}>
             {sections[4].steps!.map(s => (
               <div key={s.num} style={{ background: t.bgCard, border: `1px solid ${t.border}`, borderRadius: 16, padding: "20px 24px", display: "flex", gap: 20, alignItems: "flex-start", backdropFilter: "blur(12px)" }}>
-                <div style={{ fontSize: 28, fontWeight: 900, color: t.accent, opacity: 0.3, minWidth: 40, fontVariantNumeric: "tabular-nums" }}>{s.num}</div>
+                <div style={{ fontSize: 28, fontWeight: 900, color: t.accent, opacity: 0.3, minWidth: 40 }}>{s.num}</div>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6, color: t.text }}>{s.title}</div>
                   <p style={{ fontSize: 13, lineHeight: 1.7, color: t.textMuted, margin: 0 }}>{s.desc}</p>
@@ -346,17 +339,15 @@ const handleIngress = async () => {
       <footer style={{ borderTop: `1px solid ${t.border}`, padding: "32px 24px", textAlign: "center" }}>
         <div style={{ fontSize: 22, marginBottom: 8 }}>🌿</div>
         <div style={{ fontWeight: 700, fontSize: 14, color: t.accent, marginBottom: 4 }}>neowildrepository</div>
-        <div style={{ fontSize: 11, color: t.textMuted }}>Rashtriya Van Vigyan Evam Paryaavaran Suchna Pranali · Bharat Sarkaar</div>
-        <div style={{ fontSize: 11, color: t.textMuted, marginTop: 8, opacity: 0.6 }}>🌱 Swachh Bharat · Harit Bharat · Van Bachao · Jeevan Bachao</div>
+        <div style={{ fontSize: 11, color: t.textMuted }}>National Forest Science & Environmental Information System · Government of India</div>
+        <div style={{ fontSize: 11, color: t.textMuted, marginTop: 8, opacity: 0.6 }}>🌱 Clean India · Green India · Save Forests · Save Lives</div>
       </footer>
 
       {/* ═══════════ SIDE MENU ═══════════ */}
-      {/* Overlay */}
       {menuOpen && (
         <div onClick={() => setMenuOpen(false)}
           style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 100, backdropFilter: "blur(4px)" }} />
       )}
-      {/* Drawer */}
       <div style={{
         position: "fixed", top: 0, right: 0, bottom: 0, width: 280,
         background: t.menuBg, borderLeft: `1px solid ${t.border}`,
@@ -365,20 +356,18 @@ const handleIngress = async () => {
         display: "flex", flexDirection: "column",
         backdropFilter: "blur(24px)",
       }}>
-        {/* Menu header */}
         <div style={{ padding: "20px 24px", borderBottom: `1px solid ${t.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: t.accent, letterSpacing: "0.1em", textTransform: "uppercase" }}>Niyantran</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: t.accent, letterSpacing: "0.1em", textTransform: "uppercase" }}>Settings</span>
           <button onClick={() => setMenuOpen(false)}
             style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${t.border}`, background: "transparent", color: t.textMuted, cursor: "pointer", fontSize: 16 }}>×</button>
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
-          {/* Theme selection */}
           <div style={{ marginBottom: 28 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 12 }}>Vishay Chuno</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 12 }}>Choose Theme</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {(Object.entries(THEMES) as [ThemeKey, typeof THEMES[ThemeKey]][]).map(([key, th]) => (
-                <button key={key} onClick={() => { setTheme(key); }}
+                <button key={key} onClick={() => setTheme(key)}
                   style={{
                     padding: "12px 16px", borderRadius: 12, border: `1px solid ${theme === key ? t.accent : t.border}`,
                     background: theme === key ? t.accentSoft : "transparent",
@@ -394,12 +383,10 @@ const handleIngress = async () => {
             </div>
           </div>
 
-          {/* Divider */}
           <div style={{ height: 1, background: t.border, marginBottom: 28 }} />
 
-          {/* Ingress — hidden option */}
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 12 }}>Pravesh</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 12 }}>Access</div>
             <button
               onClick={() => { setMenuOpen(false); setIngressOpen(true); setCode(""); setCodeError(""); }}
               style={{
@@ -418,7 +405,7 @@ const handleIngress = async () => {
 
         <div style={{ padding: "16px 20px", borderTop: `1px solid ${t.border}` }}>
           <div style={{ fontSize: 10, color: t.textMuted, textAlign: "center", lineHeight: 1.6 }}>
-            🌿 Swachh Bharat · Harit Bharat<br />Van Suraksha Abhiyan
+            🌿 Clean India · Green India<br />Forest Conservation Mission
           </div>
         </div>
       </div>
@@ -434,7 +421,7 @@ const handleIngress = async () => {
             <div style={{ textAlign: "center", marginBottom: 28 }}>
               <div style={{ fontSize: 32, marginBottom: 12 }}>🔐</div>
               <div style={{ fontWeight: 800, fontSize: 18, color: t.accent, marginBottom: 6 }}>Ingress Protocol</div>
-              <div style={{ fontSize: 12, color: t.textMuted, lineHeight: 1.6 }}>Pratham kunjika darj karein</div>
+              <div style={{ fontSize: 12, color: t.textMuted, lineHeight: 1.6 }}>Enter your access key to proceed</div>
             </div>
 
             <div style={{ marginBottom: 20 }}>
@@ -454,7 +441,13 @@ const handleIngress = async () => {
                 }}
               />
               {codeError && (
-                <div style={{ fontSize: 12, color: "#f87171", textAlign: "center", marginTop: 10, padding: "8px 12px", background: "rgba(239,68,68,0.08)", borderRadius: 8, border: "1px solid rgba(239,68,68,0.15)" }}>
+                <div style={{
+                  fontSize: 12, color: codeError.startsWith("✅") ? t.accent : "#f87171",
+                  textAlign: "center", marginTop: 10, padding: "8px 12px",
+                  background: codeError.startsWith("✅") ? t.accentSoft : "rgba(239,68,68,0.08)",
+                  borderRadius: 8,
+                  border: `1px solid ${codeError.startsWith("✅") ? t.border : "rgba(239,68,68,0.15)"}`,
+                }}>
                   {codeError}
                 </div>
               )}
@@ -468,12 +461,12 @@ const handleIngress = async () => {
                 opacity: !code.trim() ? 0.5 : 1, transition: "all 0.2s",
                 boxShadow: `0 4px 20px ${t.accent}33`,
               }}>
-              {codeLoading ? "Satyapit ho raha hai..." : "Pravishtam Karein →"}
+              {codeLoading ? "Verifying..." : "Proceed →"}
             </button>
 
             <button onClick={() => { setIngressOpen(false); setCode(""); setCodeError(""); }}
               style={{ width: "100%", marginTop: 12, padding: "10px", borderRadius: 12, fontSize: 13, background: "transparent", color: t.textMuted, border: `1px solid ${t.border}`, cursor: "pointer" }}>
-              Vaapas Jao
+              Go Back
             </button>
           </div>
         </div>

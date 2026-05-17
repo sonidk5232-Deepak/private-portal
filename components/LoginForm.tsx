@@ -212,7 +212,7 @@ export default function LoginForm() {
             </h1>
             <p className="text-xs mt-1.5 font-medium tracking-widest uppercase"
               style={{ color: "rgba(74,222,128,0.45)" }}>
-              Van Sanrakshan Pranali
+              Wildlife Conservation Portal
             </p>
           </div>
 
@@ -220,7 +220,7 @@ export default function LoginForm() {
           <div className="flex items-center gap-3 my-6">
             <div className="flex-1 h-px" style={{ background: "rgba(74,222,128,0.1)" }} />
             <span className="text-[10px] tracking-widest uppercase" style={{ color: "rgba(74,222,128,0.3)" }}>
-              Pramanik Pehchaan
+             Authorized Access Only
             </span>
             <div className="flex-1 h-px" style={{ background: "rgba(74,222,128,0.1)" }} />
           </div>
@@ -230,13 +230,13 @@ export default function LoginForm() {
             <div>
               <label className="block text-[11px] font-semibold tracking-widest uppercase mb-2"
                 style={{ color: "rgba(74,222,128,0.5)" }}>
-                Prajati ID
+               Email Address
               </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="prajaati@vanraksha.in"
+                placeholder="email@example.com"
                 required
                 className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all duration-200"
                 style={{
@@ -253,7 +253,7 @@ export default function LoginForm() {
             <div>
               <label className="block text-[11px] font-semibold tracking-widest uppercase mb-2"
                 style={{ color: "rgba(74,222,128,0.5)" }}>
-                Suraksha Kunjika
+                Password
               </label>
               <input
                 type="password"
@@ -296,9 +296,9 @@ export default function LoginForm() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"/>
                   </svg>
-                  Satyapit ho raha hai...
+                  Verifying...
                 </span>
-              ) : "Pravishtam Karein →"}
+              ) : "Sign In →"}
             </button>
           </form>
 
@@ -306,11 +306,11 @@ export default function LoginForm() {
           <div className="mt-7 pt-5" style={{ borderTop: "1px solid rgba(74,222,128,0.08)" }}>
             <p className="text-[10px] text-center leading-relaxed"
               style={{ color: "rgba(74,222,128,0.25)" }}>
-              🌿 Swachh Bharat · Harit Bharat · Van Suraksha Abhiyan
+              🌿 Clean India · Green India · Forest Protection Mission
             </p>
             <p className="text-[9px] text-center mt-1.5"
               style={{ color: "rgba(74,222,128,0.15)" }}>
-              Rashtriya Van Vigyan Evam Paryavaran Suchna Pranali
+              National Forest Science & Environmental Datagrid
             </p>
           </div>
         </div>
