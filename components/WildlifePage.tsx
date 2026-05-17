@@ -123,6 +123,19 @@ export default function WildlifePage() {
   const router                        = useRouter();
   const t                             = THEMES[theme];
   const codeRef                       = useRef<HTMLInputElement>(null);
+  const lastTapRef = useRef(0);
+
+const handleIngressTap = () => {
+  const now = Date.now();
+  if (now - lastTapRef.current < 400) {
+    lastTapRef.current = 0;
+    setIngressOpen(true);
+    setCode("");
+    setCodeError("");
+  } else {
+    lastTapRef.current = now;
+  }
+};
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -335,13 +348,84 @@ export default function WildlifePage() {
         </section>
       </div>
 
-      {/* ── Footer ── */}
-      <footer style={{ borderTop: `1px solid ${t.border}`, padding: "32px 24px", textAlign: "center" }}>
-        <div style={{ fontSize: 22, marginBottom: 8 }}>🌿</div>
-        <div style={{ fontWeight: 700, fontSize: 14, color: t.accent, marginBottom: 4 }}>neowildrepository</div>
-        <div style={{ fontSize: 11, color: t.textMuted }}>National Forest Science & Environmental Information System · Government of India</div>
-        <div style={{ fontSize: 11, color: t.textMuted, marginTop: 8, opacity: 0.6 }}>🌱 Clean India · Green India · Save Forests · Save Lives</div>
-      </footer>
+     {/* ── Footer ── */}
+<footer style={{ borderTop: `1px solid ${t.border}`, padding: "56px 24px 40px", background: t.bg }}>
+  <div style={{ maxWidth: 900, margin: "0 auto" }}>
+
+    {/* Top row */}
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 40, marginBottom: 48 }}>
+      {/* Brand */}
+      <div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+          <span style={{ fontSize: 20 }}>🌿</span>
+          <span style={{ fontWeight: 800, fontSize: 15, color: t.accent }}>neowildrepository</span>
+        </div>
+        <p style={{ fontSize: 12, lineHeight: 1.8, color: t.textMuted, margin: 0 }}>
+          India's foremost digital archive for forest science, wildlife research, and environmental conservation data.
+          Established under the Ministry of Environment, Forest and Climate Change.
+        </p>
+      </div>
+
+      {/* Quick Links */}
+      <div>
+        <div style={{ fontWeight: 700, fontSize: 11, color: t.accent, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 14 }}>Quick Links</div>
+        {["Forest Database","Species Registry","Research Papers","Conservation Map","Field Reports"].map(link => (
+          <div key={link} style={{ fontSize: 12, color: t.textMuted, marginBottom: 8, cursor: "default" }}>{link}</div>
+        ))}
+      </div>
+
+      {/* Contact */}
+      <div>
+        <div style={{ fontWeight: 700, fontSize: 11, color: t.accent, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 14 }}>Contact</div>
+        <div style={{ fontSize: 12, color: t.textMuted, lineHeight: 1.9 }}>
+          <div>📍 Van Bhawan, New Delhi - 110003</div>
+          <div>📞 1800-11-0030 (Wildlife Helpline)</div>
+          <div>✉️ info@neowildrepository.gov.in</div>
+          <div style={{ marginTop: 10 }}>Mon–Fri · 09:00–17:30 IST</div>
+        </div>
+      </div>
+
+      {/* Mission */}
+      <div>
+        <div style={{ fontWeight: 700, fontSize: 11, color: t.accent, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 14 }}>Our Mission</div>
+        <p style={{ fontSize: 12, lineHeight: 1.8, color: t.textMuted, margin: "0 0 10px" }}>
+          To document, preserve, and make accessible all scientific knowledge about India's natural heritage for present and future generations.
+        </p>
+        <p style={{ fontSize: 12, lineHeight: 1.8, color: t.textMuted, margin: 0 }}>
+          Supporting researchers, conservationists, and policymakers with accurate, real-time ecological data.
+        </p>
+      </div>
+    </div>
+
+    {/* Divider */}
+    <div style={{ height: 1, background: t.border, marginBottom: 24 }} />
+
+    {/* Bottom row */}
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+      <div style={{ fontSize: 11, color: t.textMuted, opacity: 0.6 }}>
+        © 2025 neowildrepository · Government of India · All Rights Reserved
+      </div>
+      <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
+        {["Privacy Policy","Terms of Use","RTI","Sitemap"].map(item => (
+          <span key={item} style={{ fontSize: 11, color: t.textMuted, opacity: 0.5, cursor: "default" }}>{item}</span>
+        ))}
+        {/* Hidden Ingress — double-tap to open */}
+        <span
+          onClick={handleIngressTap}
+          style={{ fontSize: 11, color: t.textMuted, opacity: 0.5, cursor: "default", userSelect: "none" }}>
+          Ingress
+        </span>
+      </div>
+    </div>
+
+    <div style={{ textAlign: "center", marginTop: 20 }}>
+      <div style={{ fontSize: 11, color: t.textMuted, opacity: 0.4 }}>
+        🌱 Clean India · Green India · Save Forests · Save Lives
+      </div>
+    </div>
+
+  </div>
+</footer>
 
       {/* ═══════════ SIDE MENU ═══════════ */}
       {menuOpen && (
@@ -383,24 +467,7 @@ export default function WildlifePage() {
             </div>
           </div>
 
-          <div style={{ height: 1, background: t.border, marginBottom: 28 }} />
-
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 12 }}>Access</div>
-            <button
-              onClick={() => { setMenuOpen(false); setIngressOpen(true); setCode(""); setCodeError(""); }}
-              style={{
-                width: "100%", padding: "13px 16px", borderRadius: 12,
-                border: `1px solid ${t.border}`, background: t.accentSoft,
-                color: t.accent, cursor: "pointer", fontSize: 13, fontWeight: 700,
-                display: "flex", alignItems: "center", gap: 10, transition: "all 0.2s",
-              }}
-              onMouseOver={e => (e.currentTarget.style.borderColor = t.accent)}
-              onMouseOut={e => (e.currentTarget.style.borderColor = t.border)}>
-              <span>🔐</span>
-              Ingress
-            </button>
-          </div>
+        
         </div>
 
         <div style={{ padding: "16px 20px", borderTop: `1px solid ${t.border}` }}>
