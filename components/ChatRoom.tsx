@@ -1252,7 +1252,13 @@ const cancelRecording = () => {
     ref={textareaRef}
     value={draft}
     onChange={(e) => handleTyping(e.target.value)}
-    onKeyDown={(e) => { if (e.key === "Enter" && e.ctrlKey) { e.preventDefault(); selectedFile ? sendFile() : sendMessage(); } }}
+    onKeyDown={(e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    selectedFile ? sendFile() : sendMessage();
+  }
+  // Shift+Enter ka default behavior chalega — new line ban jayegi
+}}
     placeholder="Type a message..."
     rows={1}
     className="flex-1 rounded-2xl px-4 py-2.5 outline-none text-sm resize-none overflow-hidden min-h-[42px] max-h-[120px] leading-relaxed placeholder-opacity-40"
